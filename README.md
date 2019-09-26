@@ -1,4 +1,4 @@
-project_name
+GalaxyHaloConnection
 ==============================
 
 Analyze the galaxy halo connection found in hydordynamical simulations using Machine Learning techniques.
