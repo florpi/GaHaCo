@@ -9,9 +9,8 @@ import numpy as np
 import pickle
 from comet_ml import Experiment
 
-from sklearn.utils import resample
-from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from sklearn.utils import resample
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import (
@@ -53,10 +52,10 @@ logging.basicConfig(
 # -----------------------------------------------------------------------------
 def main(model, label, sampling, PCA):
 
-    logging.info("")
-    logging.info(f"GROWING TREES")
-    logging.info("")
-
+	logging.info("")
+	logging.info("GROWING TREES")
+	logging.info("")
+	
     # ML-model settings
     config_file_path = "../../models/rnf/config_%s.json" % model
     config = load_config(config_file_path=config_file_path)
@@ -141,9 +140,8 @@ def main(model, label, sampling, PCA):
         experiment=experiment,
     )
 
-    visualize.plot_feature_importance(
-        rf, train.drop(columns="labels").columns, experiment=experiment
-    )
+	#visualize.plot_tpcf(pred_test_positions, label_test_positions, 
+	#		experiment = experiment)
 
     label_test_positions = test_pos_hydro[test.labels, :]
     pred_test_positions = (np.vstack([test.x_dmo, test.y_dmo, test.z_dmo]).T)[
