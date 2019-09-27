@@ -1,7 +1,7 @@
 GalaxyHaloConnection
 ==============================
 [![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
-.. image:: https://github.com/florpi/GaHaCo/src/models/coverage.svg 
+.. image:: https://github.com/florpi/GaHaCo/blob/master/src/models/coverage.svg
     :alt: Code testing coverage
     :target: https://github.com/florpi/GaHaCo
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
