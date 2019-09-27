@@ -109,27 +109,6 @@ def balance_dataset(
     return df_sample
 
 
-def _find_center_of_balance(df):
-    """
-    """
-
-    # bin data
-    nbins = 15
-    bins = np.logspace(np.log10(np.min(df.M200c)), 12.5, nbins + 1)
-
-    # nr. of luminous galaxies
-    nluminous, edges, _ = binned_statistic(
-        df.M200c, df.labels, statistic="mean", bins=bins
-    )
-
-    # Find x for which y = 0.5
-    interpolator = interp1d(nluminous, (edges[1:] + edges[:-1]) / 2.0)
-    centre = interpolator(0.5)
-    end = ((edges[1:] + edges[:-1]) / 2.0)[nluminous == 1.0][0]
-
-    return centre, end
-
-
 def _balance_df_given_mass(
     df, labels_name, minimum_mass, maximum_mass, majority, minority, mode="upsample"
 ):
