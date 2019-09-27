@@ -1,5 +1,6 @@
 GalaxyHaloConnection
 ==============================
+[![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
 
 Analyze the galaxy halo connection found in hydordynamical simulations using Machine Learning techniques.
 
