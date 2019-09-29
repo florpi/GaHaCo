@@ -6,6 +6,7 @@
         "secondary": "PCA",
     },
     "model": {
+        "name": "lightgbm",
         "module": "lightgbm",
         "parameters": {
             "application": "binary",
@@ -22,5 +23,3 @@
         }
     }
 }
-
-main("rnf", "dark_or_light", "downsample", False)

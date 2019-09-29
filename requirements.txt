@@ -19,4 +19,5 @@ tables>=3.5.2
 torch>=1.2.0
 tensorboard
 comet-ml>=2.0.13
-
+xgboost>=0.9
+lightgbm>=2.3.0

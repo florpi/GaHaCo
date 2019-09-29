@@ -52,16 +52,15 @@ logging.basicConfig(
 # -----------------------------------------------------------------------------
 # MAIN CODE
 # -----------------------------------------------------------------------------
-def main():
+def main(model: str):
 
     logging.info("")
     logging.info("GROWING TREES")
     logging.info("")
 
     # ML-model settings
-    config_file_path = "../../models/rnf/config_%s.json" % model
+    config_file_path = "../../models/%s/config_%s.json" % (model, model)
     config = load_config(config_file_path=config_file_path)
-    print("+++ config :", config)
 
     # -------------------------------------------------------------------------
     # Load and prepare datasets
@@ -71,18 +70,21 @@ def main():
     output_file = "merged_dataframe.h5"
     data_path = "/cosma6/data/dp004/dc-cues1/tng_dataframes/"
     hdf5_filename = data_path + output_file
-    train, test, test_pos_hydro = get_data(hdf5_filename, label)
+    train, test, test_pos_hydro = get_data(hdf5_filename, config["label"])
 
     # Prepare datasets
     ## Balance training set in the transition region
     center_transition, end_transition = find_transition_regions(train)
-    train = balance_dataset(train, center_transition, end_transition, sampling)
+    train = balance_dataset(train, center_transition, end_transition, config["sampling"])
 
     train_features = train.drop(columns="labels")
     train_labels = train["labels"]
 
     test_features = test.drop(columns="labels")
     test_labels = test["labels"]
+
+    # keep position for 2PCF test
+    test_pos = test[["x_dmo", "y_dmo", "z_dmo"]] 
 
     ## Standarize features
     scaler = StandardScaler()
@@ -97,51 +99,46 @@ def main():
     test = {"features": test_features, "labels": test_labels}
 
     if "feature_optimization" in config.keys():
-        # Perform feature optimization
+        # Perform feature optimization"
         train["features"], test["features"] = feature_optimization(
             train, test, config["feature_optimization"], experiment=experiment
         )
-
+        
     # -------------------------------------------------------------------------
     # Set-up and Run inference model
 	# -------------------------------------------------------------------------
-
-	test_pred = prediction(train, test, config["model"])
-
-	# Run RNF
-    test_pred = rf.predict(test_features)
-    # Save results
-    precision = precision_score(test_labels, test_pred)
-    metrics = {"precision": precision}
-
-    experiment.log_metrics(metrics)
+    
+    test["pred"] = prediction(train, test, config["model"])
 
     # -------------------------------------------------------------------------
     # Save output's visualizations
     # -------------------------------------------------------------------------
+    
+    # Save results
+    precision = precision_score(test["labels"], test["pred"])
+    metrics = {"precision": precision}
+
+    experiment.log_metrics(metrics)
 
     visualize.plot_confusion_matrix(
-        test_labels,
-        test_pred,
+        test["labels"],
+        test["pred"],
         classes=["Dark", "Luminous"],
         normalize=True,
         experiment=experiment,
     )
 
-    # visualize.plot_tpcf(pred_test_positions, label_test_positions,
-    # 		experiment = experiment)
-
-    label_test_positions = test_pos_hydro[test.labels, :]
-    pred_test_positions = (np.vstack([test.x_dmo, test.y_dmo, test.z_dmo]).T)[
-        test_pred, :
+    label_test_positions = test_pos_hydro[test["labels"], :]
+    pred_test_positions = (np.vstack([test_pos.x_dmo, test_pos.y_dmo, test_pos.z_dmo]).T)[
+        test["pred"], :
     ]
 
-    visualize.plot_tpcf(
-        pred_test_positions, label_test_positions, experiment=experiment
-    )
+    #visualize.plot_tpcf(
+    #    pred_test_positions, label_test_positions, experiment=experiment
+    #)
 
 
 # TODO: change to autoconfig
 if __name__ == "__main__":
 
-    main()
+    main("rnf")

@@ -19,15 +19,22 @@ def get_data(hdf5_filename: str, arg_label: str):
 	"""
     df = pd.read_hdf(hdf5_filename, key="df", mode="r")
 
+    #TODO: this should be somewhere else
+    x_hydro= df['x_hydro']
+    y_hydro = df['y_hydro']
+    z_hydro = df['z_hydro']
+    pos_hydro = np.vstack((x_hydro, y_hydro, z_hydro)).T
+
     # Chose label
     if arg_label == "dark_or_light":
         df["labels"] = df.N_gals > 0
         df = df.drop(
             columns=[
                 "N_gals",
-                "ID_HYDRO",
-                "ID_DMO",
-                "M200_HYDRO",
+                # TODO: keep them, but somewhere else
+                #"ID_HYDRO",
+                #"ID_DMO",
+                #"M200_HYDRO",
                 "M_stars",
                 "x_hydro",
                 "y_hydro",
@@ -39,9 +46,10 @@ def get_data(hdf5_filename: str, arg_label: str):
         df = df.drop(
             columns=[
                 "N_gals",
-                "ID_HYDRO",
-                "ID_DMO",
-                "M200_HYDRO",
+                # TODO: keep them, but somewhere else
+                #"ID_HYDRO",
+                #"ID_DMO",
+                #"M200_HYDRO",
                 "M_stars",
                 "x_hydro",
                 "y_hydro",
@@ -60,7 +68,9 @@ def get_data(hdf5_filename: str, arg_label: str):
     train = df.iloc[train_idx]
     test = df.iloc[test_idx]
 
-    return train, test
+    test_pos_hydro = pos_hydro[test_idx,:]
+
+    return train, test, test_pos_hydro
 
 
 def _train_test_val_split(n_nodes, train_size=0.7):

@@ -13,6 +13,7 @@ def feature_optimization(train, test, arg, experiment=None):
     """
     Perform feature decompositions and importance measures to create a optimized
     set of features with low feature variance or correlation.
+    Filter based on primary optimization setting.
     """
 
     if arg["primary"] == "PCA":
@@ -38,6 +39,7 @@ def feature_optimization(train, test, arg, experiment=None):
 
 def pca_transform(train, test, arg_pca, experiment=None):
     """
+    Filter based on secondary optimization setting.
     """
 
     if isinstance(arg_pca, (dict)):
@@ -52,6 +54,7 @@ def pca_transform(train, test, arg_pca, experiment=None):
 
 def _pca_dict(train, test, arg_pca: dict):
     """
+    Use module class internal flags
     """
     pca = PCA(**arg_pca)
 
@@ -64,6 +67,8 @@ def _pca_dict(train, test, arg_pca: dict):
 
 def _pca_corrlimit(train, test, correlation_limit: float):
     """
+    Set number of components of PCA equal to input feature which are correlated
+    less than 'correlation_limit'.
     """
     # convert np.ndarray to pd.dataframe
     if isinstance(train_features_std, (np.ndarray)):
@@ -99,6 +104,7 @@ def _pca_corrlimit(train, test, correlation_limit: float):
 
 def _pca_cross_val(train, test):
     """
+    Chose number of components of PCA that achieved maximum cross validation score. 
     """
     pca = PCA(svd_solver='full')
 

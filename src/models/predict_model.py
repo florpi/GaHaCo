@@ -7,33 +7,34 @@ import lightgbm
 
 
 def prediction(train, test, arg_model):
+    """
+    """
 
     if arg_model["module"] == "sklearn.ensemble":
 
         if arg_model["class"] == "RandomForestClassifier":
+            # Initiate RNF-vertical-tree
             rf = RandomForestClassifier(**arg_model["parameters"])
+            # Create forest
             rf.fit(train["features"], train["labels"])
-            return rf.predict(test_features_std)
+            # make prediction
+            return rf.predict(test["features"])
 
     if arg_model["module"] == "lightgbm":
 
         # Create the LightGBM training data containers
         # TODO: put parameters into config
-        x, x_test, y, y_test = train_test_split(
+        x, x_eval, y, y_eval = train_test_split(
             train["features"],
             train["labels"],
             test_size=0.2,
             random_state=42,
             stratify=train["features"],
         )
+        lgb_train = lightgbm.Dataset(x, label=y)
+        lgb_eval = lightgbm.Dataset(x_eval, label=y_eval)
 
-        lgb_train = lightgbm.Dataset(
-            x,
-            label=y,
-            # categorical_feature=list(feature_names)
-        )
-        lgb_eval = lightgbm.Dataset(x_test, label=y_test)
-
+        # Initiate RNF-horizontal-tree and create forest
         # TODO: put parameters into config
         model = lightgbm.train(
             arg_model["parameters"],
@@ -42,5 +43,6 @@ def prediction(train, test, arg_model):
             num_boost_round=50,
             early_stopping_rounds=10,
         )
-
+        
+        # make prediction
         return model.predict(test["features"])
