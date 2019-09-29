@@ -1,1 +1,16 @@
-{"experiment_dir": "blank", "model": {"module": "sklearn.ensemble", "class": "RandomForestClassifier", "parameters": {"n_estimators": 500, "random_state": 0}}}
+{
+    "label": "dark_or_light",
+    "sampling": "downsample",
+    "feature_optimization": {
+        "primary": "PCA",
+        "secondary": "PCA",
+    },
+    "model": {
+        "module": "sklearn.ensemble",
+        "class": "RandomForestClassifier",
+        "parameters": {
+            "n_estimators": 500,
+            "random_state": 0
+        }
+    }
+}

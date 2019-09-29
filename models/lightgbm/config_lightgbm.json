@@ -1,1 +1,26 @@
-{"experiment_dir": "blank", "model": {"module": "sklearn.ensemble", "class": "RandomForestClassifier", "parameters": {"application": 'binary', "objective": 'binary', "metric": 'auc', "is_unbalance": 'false', "boosting": 'gbdt', "num_leaves": 10, "feature_fraction": 1.0, "bagging_fraction": 1.0, "bagging_freq": 0, "learning_rate": 0.05, "verbose": 0}}}
+{
+    "label": "dark_or_light",
+    "sampling": "downsample",
+    "feature_optimization": {
+        "primary": "PCA",
+        "secondary": "PCA",
+    },
+    "model": {
+        "module": "lightgbm",
+        "parameters": {
+            "application": "binary",
+            "objective": "binary",
+            "metric": "auc",
+            "is_unbalance": "false",
+            "boosting": "gbdt",
+            "num_leaves": 10,
+            "feature_fraction": 1,
+            "bagging_fraction": 1,
+            "bagging_freq": 0,
+            "learning_rate": 0.05,
+            "verbose": 0
+        }
+    }
+}
+
+main("rnf", "dark_or_light", "downsample", False)
