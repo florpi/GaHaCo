@@ -14,6 +14,7 @@ import os
 # FUNCTION DEFINITIONS
 # -----------------------------------------------------------------------------
 
+
 def load_config(config_file_path: str) -> dict:
     """
     Load and amend an experiment configuration.
@@ -30,10 +31,10 @@ def load_config(config_file_path: str) -> dict:
 
     # Build the full path to the config file and check if it exists
     if not os.path.exists(config_file_path):
-        raise FileNotFoundError(f'{config_file_path} does not exist!')
+        raise FileNotFoundError(f"{config_file_path} does not exist!")
 
     # Load the config file into a dict
-    with open(config_file_path, 'r') as json_file:
+    with open(config_file_path, "r") as json_file:
         config = json.load(json_file)
 
     # -------------------------------------------------------------------------
@@ -41,6 +42,6 @@ def load_config(config_file_path: str) -> dict:
     # -------------------------------------------------------------------------
 
     # Add the path to the experiments folder to the config dict
-    config['experiment_dir'] = os.path.dirname(config_file_path)
+    config["experiment_dir"] = os.path.dirname(config_file_path)
 
     return config
