@@ -137,7 +137,6 @@ def main(model, label, sampling, PCA):
 
 	# Run RNF
 	test_pred = rf.predict(test_features)
-
 	# Save results
 	precision = precision_score(test_labels, test_pred)
 	metrics = {
@@ -153,6 +152,20 @@ def main(model, label, sampling, PCA):
 
 	visualize.plot_confusion_matrix(test_labels, test_pred,  classes = ['Dark', 'Luminous'],
 			normalize = True, experiment = experiment)	    
+
+	# Confusion matrix for objects below the central region, where most of the training set is dark objects
+	test_low_mass = test[test.M200c < center_transition]
+	test_pred_low_mass = rf.predict(scaler.transform(test_low_mass.drop(columns = "labels")))
+	visualize.plot_confusion_matrix(test_low_mass.labels, test_pred_low_mass,  classes = ['Dark', 'Luminous'],
+			normalize = True, experiment = experiment, log_name = 'Low Mass')	    
+
+	# Confusion matrix for objects that are above the central region but bellow the mass at which all objects are luminous.
+	# Here the training set is mostly luminous objects.
+	test_high_mass = test[(test.M200c > center_transition) & (test.M200c < end_transition)]
+	test_pred_high_mass = rf.predict(scaler.transform(test_high_mass.drop(columns = "labels")))
+	visualize.plot_confusion_matrix(test_high_mass.labels, test_pred_high_mass,  classes = ['Dark', 'Luminous'],
+			normalize = True, experiment = experiment, log_name = 'High Mass')	    
+
 
 	visualize.plot_feature_importance(rf, train.drop(columns='labels').columns, 
 			experiment = experiment)

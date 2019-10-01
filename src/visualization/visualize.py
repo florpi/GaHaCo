@@ -13,7 +13,8 @@ def plot_confusion_matrix(y_true, y_pred, classes,
 						  normalize=False,
 						  title=None,
 						  cmap=plt.cm.Blues, 
-						  experiment = None):
+						  experiment = None,
+						  log_name = 'Confusion Matrix'):
 	"""
 	This function prints and plots the confusion matrix.
 	Normalization can be applied by setting `normalize=True`.
@@ -61,7 +62,7 @@ def plot_confusion_matrix(y_true, y_pred, classes,
 					color="white" if cm[i, j] > thresh else "black")
 	fig.tight_layout()
 	if experiment is not None:
-		experiment.log_figure(figure_name = 'Confusion Matrix', figure = fig)
+		experiment.log_figure(figure_name = log_name, figure = fig)
 	else:
 		return cm, ax
 
