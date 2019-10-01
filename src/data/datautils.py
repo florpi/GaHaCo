@@ -1,6 +1,10 @@
 import numpy as np
 from typing import Any, Callable
+
 from sklearn.utils import resample
+from sklearn.decomposition import PCA
+from sklearn.model_selection import cross_val_score
+
 from scipy.stats import binned_statistic
 
 import h5py
@@ -15,19 +19,43 @@ def get_data(hdf5_filename: str, arg_label: str):
 	"""
     df = pd.read_hdf(hdf5_filename, key="df", mode="r")
 
-    # TODO: this should be somewhere else
-    x_hydro = df["x_hydro"]
-    y_hydro = df["y_hydro"]
-    z_hydro = df["z_hydro"]
+    #TODO: this should be somewhere else
+    x_hydro= df['x_hydro']
+    y_hydro = df['y_hydro']
+    z_hydro = df['z_hydro']
     pos_hydro = np.vstack((x_hydro, y_hydro, z_hydro)).T
 
     # Chose label
     if arg_label == "dark_or_light":
         df["labels"] = df.N_gals > 0
-        df = df.drop(columns=["N_gals", "M_stars", "x_hydro", "y_hydro", "z_hydro"])
+        df = df.drop(
+            columns=[
+                "N_gals",
+                # TODO: keep them, but somewhere else
+                #"ID_HYDRO",
+                #"ID_DMO",
+                #"M200_HYDRO",
+                "M_stars",
+                "x_hydro",
+                "y_hydro",
+                "z_hydro",
+            ]
+        )
     elif arg_label == "nr_of_galaxies":
         df["labels"] = df.N_gals
-        df = df.drop(columns=["N_gals", "M_stars", "x_hydro", "y_hydro", "z_hydro"])
+        df = df.drop(
+            columns=[
+                "N_gals",
+                # TODO: keep them, but somewhere else
+                #"ID_HYDRO",
+                #"ID_DMO",
+                #"M200_HYDRO",
+                "M_stars",
+                "x_hydro",
+                "y_hydro",
+                "z_hydro",
+            ]
+        )
     elif arg_label == "both":
         df["labels"] = df.N_gals > 0
 
@@ -40,7 +68,7 @@ def get_data(hdf5_filename: str, arg_label: str):
     train = df.iloc[train_idx]
     test = df.iloc[test_idx]
 
-    test_pos_hydro = pos_hydro[test_idx, :]
+    test_pos_hydro = pos_hydro[test_idx,:]
 
     return train, test, test_pos_hydro
 
@@ -69,7 +97,8 @@ def _train_test_val_split(n_nodes, train_size=0.7):
 def find_transition_regions(df: pd.DataFrame):
     """
 
-	Function to find two masses: where half the haloes are luminous, and where all haloes are luminous
+	Function to find two masses: where half the haloes are luminous,
+	and where all haloes are luminous
 
 	Args:
 		df: dataframe containing masses and wheather luminous or dark
@@ -97,8 +126,6 @@ def find_transition_regions(df: pd.DataFrame):
 def balance_dataset(
     df, center_transition: float, end_transition: float, arg_sampling: str
 ):
-
-    # TODO: fix balance parameters; return none
     df_sample = _balance_df_given_mass(
         df, "labels", 0.0, center_transition, 0, 1, mode=arg_sampling
     )
@@ -145,3 +172,88 @@ def _balance_df_given_mass(
 
     # elif mode == 'smote':
     # 	sm = SMOTE(random_state = 12, ratio = 1.)
+
+
+
+def pca_transform(train, test, arg_pca):
+    """
+    """
+    
+    if isinstance(arg_pca, (dict)):
+        return _pca_dict(train, test, arg_pca)
+    elif isinstance(arg_pca, (float)):
+        return _pca_corrlimit(train, test, arg_pca)
+    elif arg_pca == "cross_val":
+        return _pca_cross_val(train, test)
+
+
+def _pca_dict(train, test, arg_pca: dict):
+    """
+    """
+    pca = PCA(**arg_pca)
+
+    # Perform feature optimization
+    train = pca.fit_transform(train)
+    test = pca.transform(test)
+
+    return train, test, pca.n_components_
+
+
+def _pca_corrlimit(train, test, correlation_limit: float):
+    """
+    """
+    # convert np.ndarray to pd.dataframe
+    if isinstance(train_features_std, (np.ndarray)):
+        df_train = pd.DataFrame(
+            data=train,
+            index=np.arange(train.shape[0]),
+            columns=["orig_%d" % ff for ff in range(train.shape[1])],
+        )
+        
+        df_test = pd.DataFrame(
+            data=test,
+            index=np.arange(test.shape[0]),
+            columns=["orig_%d" % ff for ff in range(test.shape[1])],
+        )
+    
+    # Create correlation matrix
+    corr_matrix = df_train.corr().abs()
+    upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(np.bool))
+    # Find index of feature columns with correlation greater than correlation_limit
+    to_drop = [column for column in upper.columns if any(upper[column] > correlation_limit)]
+    # remove highly correlated features from dataset
+    df_train = df_train.drop(df_train[to_drop], axis=1)
+    df_test = df_test.drop(df_test[to_drop], axis=1)
+    
+    pca = PCA(n_components=len(df_train.columns.values))
+    
+    # Perform feature optimization
+    train = pca.fit_transform(df_train.values)
+    test = pca.transform(df_test.values)
+    
+    return train, test, pca.n_components
+
+
+def _pca_cross_val(train, test):
+    """
+    """
+    pca = PCA(svd_solver='full')
+
+    pca_scores = []
+    n_components = np.arange(0, train.shape[1], 1)
+
+    # determine cross-val. score for different dimensions of feature space
+    for n in n_components:
+        pca.n_components = n
+        pca_scores.append(np.mean(cross_val_score(pca, train, cv=5)))
+
+    # choose # of dimensions with highest cross-val. score
+    # another option would be: pca = PCA(svd_solver='full', n_components='mle')
+    n_components = n_components[np.argmax(pca_scores)]
+    pca.n_components = n_components
+    
+    # Perform feature optimization
+    train = pca.fit_transform(train)
+    test = pca.transform(test)
+
+    return train, test, pca.n_components

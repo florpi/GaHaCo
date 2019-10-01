@@ -9,9 +9,8 @@ import numpy as np
 import pickle
 from comet_ml import Experiment
 
-from sklearn.utils import resample
-from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from sklearn.utils import resample
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import (
@@ -22,19 +21,27 @@ from sklearn.metrics import (
 	precision_recall_fscore_support,
 )
 
-from GaHaCo.src.utils.datautils import get_data, balance_dataset, find_transition_regions
+from GaHaCo.src.utils.datautils import (
+	get_data,
+	balance_dataset,
+	find_transition_regions,
+)
+from GaHaCo.src.utils.optimize import feature_optimization
 from GaHaCo.src.utils.config import load_config
-from GaHaCo.src.visualization import visualize 
+from GaHaCo.src.visualization import visualize
+from GaHaCo.src.models.predict_model import prediction
+from GaHaCo.src.models.fit_model import fit 
 
 import logging
 
 # -----------------------------------------------------------------------------
-# Loggings 
+# Loggings
 # -----------------------------------------------------------------------------
 tag_datetime = datetime.now().strftime("%H%M_%d%m%Y")
 
-experiment = Experiment(api_key="VNQSdbR1pw33EkuHbUsGUSZWr",
-		                        project_name="general", workspace="florpi")
+experiment = Experiment(
+	api_key="VNQSdbR1pw33EkuHbUsGUSZWr", project_name="general", workspace="florpi"
+)
 
 logging.basicConfig(
 	filename="../../models/rnf/log_%s.log" % tag_datetime,
@@ -44,33 +51,16 @@ logging.basicConfig(
 )
 
 # -----------------------------------------------------------------------------
-# General Settings/Command-line settings 
-# -----------------------------------------------------------------------------
-
-#@ex.config
-def cfg():
-	# General settings
-	config_gen = {
-		"model": 'rnf', #["rnf, xgboost, lightgbm] 
-		"label": 'dark_or_light', #[dark_or_light, nr_of_galaxies, central_or_satellite, ..]
-		"sampling": 'downsample',  #[upsample, downsample] 
-		"PCA": False, 
-	} 
-	#ex.add_config(config_gen)
-	experiment.log_parameters(config_gen)
-	
-# -----------------------------------------------------------------------------
 # MAIN CODE
 # -----------------------------------------------------------------------------
-#@ex.automain
-def main(model, label, sampling, PCA):
+def main(model: str):
 
 	logging.info("")
-	logging.info(f"GROWING TREES")
+	logging.info("GROWING TREES")
 	logging.info("")
 
 	# ML-model settings
-	config_file_path = "../../models/rnf/config_%s.json" % model
+	config_file_path = "../../models/%s/config_%s.json" % (model, model)
 	config = load_config(config_file_path=config_file_path)
 
 	# -------------------------------------------------------------------------
@@ -78,109 +68,114 @@ def main(model, label, sampling, PCA):
 	# -------------------------------------------------------------------------
 
 	# Load dataset
-	output_file = 'merged_dataframe.h5'											 
-	data_path = '/cosma6/data/dp004/dc-cues1/tng_dataframes/'
-	hdf5_filename = data_path + output_file 
-	train, test, test_pos_hydro = get_data(hdf5_filename, label)
+	output_file = "merged_dataframe.h5"
+	data_path = "/cosma6/data/dp004/dc-cues1/tng_dataframes/"
+	hdf5_filename = data_path + output_file
+	train_df, test_df, test_pos_hydro = get_data(hdf5_filename, config["label"])
 
+	
+	feature_names = train_df.drop(columns='labels').columns 
 
 	# Prepare datasets
 	## Balance training set in the transition region
-	center_transition, end_transition = find_transition_regions(train)
+	center_transition, end_transition = find_transition_regions(train_df)
+	train_df = balance_dataset(train_df, center_transition, end_transition, config["sampling"])
 
-	'''
-	ex.log_scalar(
-		"The labels before balancing are as follows:", train.labels.value_counts()
-	)
-	'''
-	train = balance_dataset(
-		train, center_transition, end_transition, sampling
-	)
-	'''
-	ex.log_scalar(
-		"The labels after balancing are as follows:\n a)",
-		train[train.M200c < center_transition].labels.value_counts(),
-	)
-	ex.log_scalar(
-		"b)",
-		train[
-			(train.M200c > center_transition) & (train.M200c < end_transition)
-		].labels.value_counts(),
-	)
-	'''
+	train_features_df = train_df.drop(columns="labels")
+	train_labels = train_df["labels"]
 
-	train_features = train.drop(columns="labels")
-	train_labels = train["labels"]
-	
-	test_features = test.drop(columns="labels")
-	test_labels = test["labels"]
+	test_features_df = test_df.drop(columns="labels")
+	test_labels = test_df["labels"]
 
+	# keep position for 2PCF test
+	test_pos = test_df[["x_dmo", "y_dmo", "z_dmo"]] 
 	## Standarize features
 	scaler = StandardScaler()
-	scaler.fit(train_features)
-	train_features = scaler.transform(train_features)
-	test_features = scaler.transform(test_features)
+	scaler.fit(train_features_df)
+	train_features = scaler.transform(train_features_df)
+	test_features = scaler.transform(test_features_df)
+	# convert pd.dataframe to np.ndarray
+	train_labels = train_labels.values
+	test_labels = test_labels.values
 
-	if PCA is True:
-		# n_comp = 7
-		# pca = PCA(n_components=n_comp)
-		# pca = PCA().fit(train_features)
-		pca_data = PCA().fit_transform(train_features)
-		pca_inv_data = PCA().inverse_transform(np.eye(len(feature_names)))
+	train = {"features": train_features, "labels": train_labels}
+	test = {"features": test_features, "labels": test_labels}
+
+	if "feature_optimization" in config.keys():
+		# Perform feature optimization"
+		train["features"], test["features"] = feature_optimization(
+			train, test, config["feature_optimization"], experiment=experiment
+
+		)
+		
+		feature_names = [f'PCA_{i}' for i in range(train["features"].shape[1])]
 
 	# -------------------------------------------------------------------------
-	# Set-up and Run random-forest (RNF) model
+	# Set-up and Run inference model
 	# -------------------------------------------------------------------------
 
-	rf = RandomForestClassifier(**config["model"]["parameters"])
-	rf.fit(train_features, train_labels)
+	trained_model = fit(train, config["model"])
 
-	# Run RNF
-	test_pred = rf.predict(test_features)
-	# Save results
-	precision = precision_score(test_labels, test_pred)
-	metrics = {
-			   "precision": precision
-			   }
-
-	experiment.log_metrics(metrics)
-
+	test["pred"] = prediction(trained_model, test["features"])
+	
 	# -------------------------------------------------------------------------
 	# Save output's visualizations
 	# -------------------------------------------------------------------------
+	
 
+	visualize.plot_confusion_matrix(
+		test["labels"],
+		test["pred"],
+		classes=["Dark", "Luminous"],
+		normalize=True,
+		experiment=experiment,
+	)
 
-	visualize.plot_confusion_matrix(test_labels, test_pred,  classes = ['Dark', 'Luminous'],
-			normalize = True, experiment = experiment)	    
-
+ 
 	# Confusion matrix for objects below the central region, where most of the training set is dark objects
-	test_low_mass = test[test.M200c < center_transition]
-	test_pred_low_mass = rf.predict(scaler.transform(test_low_mass.drop(columns = "labels")))
-	visualize.plot_confusion_matrix(test_low_mass.labels, test_pred_low_mass,  classes = ['Dark', 'Luminous'],
-			normalize = True, experiment = experiment, log_name = 'Low Mass')	    
+	low_mass_threshold = test_features_df.M200c.values < center_transition
+	test_pred_low_mass = prediction(trained_model, test['features'][low_mass_threshold])
+	visualize.plot_confusion_matrix(test['labels'][low_mass_threshold], 
+									test_pred_low_mass,
+									classes = ['Dark', 'Luminous'],
+									normalize = True, 
+									experiment = experiment, 
+									log_name = 'Low Mass')		
 
 	# Confusion matrix for objects that are above the central region but bellow the mass at which all objects are luminous.
 	# Here the training set is mostly luminous objects.
-	test_high_mass = test[(test.M200c > center_transition) & (test.M200c < end_transition)]
-	test_pred_high_mass = rf.predict(scaler.transform(test_high_mass.drop(columns = "labels")))
-	visualize.plot_confusion_matrix(test_high_mass.labels, test_pred_high_mass,  classes = ['Dark', 'Luminous'],
-			normalize = True, experiment = experiment, log_name = 'High Mass')	    
+	high_mass_threshold = (test_features_df.M200c.values > center_transition) & (test_features_df.M200c.values < end_transition)
+	test_pred_high_mass = prediction(trained_model, test['features'][high_mass_threshold])
+	visualize.plot_confusion_matrix(test['labels'][high_mass_threshold], 
+									test_pred_high_mass,  
+									classes = ['Dark', 'Luminous'],
+									normalize = True, 
+									experiment = experiment, 
+									log_name = 'High Mass')		
+
+	# Feature importance
+
+	if model == 'rnf':
+		visualize.plot_feature_importance(trained_model, 
+				feature_names, 
+				experiment = experiment)
+	# tpcf
+	label_test_positions = test_pos_hydro[test["labels"], :]
+	pred_test_positions = (np.vstack([test_pos.x_dmo, test_pos.y_dmo, test_pos.z_dmo]).T)[test["pred"], :]
+
+	visualize.plot_tpcf(
+	  pred_test_positions, label_test_positions, experiment=experiment
+	)
 
 
-	visualize.plot_feature_importance(rf, train.drop(columns='labels').columns, 
-			experiment = experiment)
 
-	label_test_positions = test_pos_hydro[test.labels, :]
-	pred_test_positions = (np.vstack([test.x_dmo, test.y_dmo, test.z_dmo]).T)[test_pred, :]
+	# Metrics  
+	precision = precision_score(test["labels"], test["pred"])
+	metrics = {"precision": precision}
 
-	visualize.plot_tpcf(pred_test_positions, label_test_positions, 
-			experiment = experiment)
+	experiment.log_metrics(metrics)
+	
+# TODO: change to autoconfig
+if __name__ == "__main__":
 
-
-
-
-#TODO: change to autoconfig
-if __name__=='__main__':
-
-	main('rnf', 'dark_or_light','downsample', False)
- 
+	main("rnf")

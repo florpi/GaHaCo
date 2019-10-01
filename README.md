@@ -1,5 +1,9 @@
-project_name
+GalaxyHaloConnection
 ==============================
+[![MIT license](http://img.shields.io/badge/license-MIT-brightgreen.svg)](http://opensource.org/licenses/MIT)
+![Code coverage](https://github.com/florpi/GaHaCo/blob/master/src/models/coverage.svg)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+[![Chat on Slack](https://img.shields.io/badge/chat-on%20slack-684dad.svg)](https://gahaco.slack.com)
 
 Analyze the galaxy halo connection found in hydordynamical simulations using Machine Learning techniques.
 
