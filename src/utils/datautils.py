@@ -24,10 +24,10 @@ def get_data(hdf5_filename: str, arg_label: str):
     # Chose label
     if arg_label == "dark_or_light":
         df["labels"] = df.N_gals > 0
-        df = df.drop(columns=["N_gals", "M_stars", "x_hydro", "y_hydro", "z_hydro", "M200c_hydro", "ID_hydro"])
+        df = df.drop(columns=["N_gals", "M_stars", "x_hydro", "y_hydro", "z_hydro", "M200_HYDRO", "ID_HYDRO", "ID_DMO"])
     elif arg_label == "nr_of_galaxies":
         df["labels"] = df.N_gals
-        df = df.drop(columns=["N_gals", "M_stars", "x_hydro", "y_hydro", "z_hydro", "M200c_hydro", "ID_hydro"])
+        df = df.drop(columns=["N_gals", "M_stars", "x_hydro", "y_hydro", "z_hydro", "M200_HYDRO", "ID_HYDRO", "ID_DMO"])
     elif arg_label == "both":
         df["labels"] = df.N_gals > 0
 
