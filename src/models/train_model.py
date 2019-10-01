@@ -155,7 +155,7 @@ def main(model: str):
 
 	# Feature importance
 
-	if model == 'rnf':
+	if 'rnf' in model:
 		visualize.plot_feature_importance(trained_model, 
 				feature_names, 
 				experiment = experiment)

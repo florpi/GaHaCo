@@ -10,13 +10,13 @@ from sklearn.utils.multiclass import unique_labels
 
 
 def plot_confusion_matrix(
-    y_true,
-    y_pred,
-    classes,
-    normalize=False,
-    title=None,
-    cmap=plt.cm.Blues,
-    experiment=None,
+	y_true,
+	y_pred,
+	classes,
+	normalize=False,
+	title=None,
+	cmap=plt.cm.Blues,
+	experiment=None,
 	log_name = 'Confusion Matrix',
 ):
 
@@ -75,7 +75,7 @@ def plot_confusion_matrix(
 def plot_feature_importance(rf: None,
 		feature_names: list,
 		experiment = None):
-    """
+	"""
 	Function to generate a bar plot that shows the feature importance after training
 
 	Args:
@@ -86,34 +86,35 @@ def plot_feature_importance(rf: None,
 
 	"""
 
-    importances = rf.feature_importances_
-    std = np.std([tree.feature_importances_ for tree in rf.estimators_], axis=0)
-    indices = np.argsort(importances)[::-1]
-    feature_names = np.array(feature_names)
+	importances = rf.feature_importances_
+	std = np.std([tree.feature_importances_ for tree in rf.estimators_], axis=0)
+	indices = np.argsort(importances)[::-1]
+	feature_names = np.array(feature_names)
 
-    fig = plt.figure()
+	fig = plt.figure()
 
-    plt.bar(
-        range(len(feature_names)),
-        importances[indices],
-        color="r",
-        yerr=std[indices],
-        align="center",
-    )
-    plt.xticks(range(len(feature_names)), feature_names[indices])
-    plt.xlim([-1, len(feature_names)])
+	plt.bar(
+		range(len(feature_names)),
+		importances[indices],
+		color="r",
+		yerr=std[indices],
+		align="center",
+	)
+	plt.xticks(range(len(feature_names)), feature_names[indices], rotation = 'vertical')
+	plt.xlim([-1, len(feature_names)])
+	plt.tight_layout()
 
-    if experiment is not None:
-        experiment.log_figure(figure_name="Feature importance", figure=fig)
+	if experiment is not None:
+		experiment.log_figure(figure_name="Feature importance", figure=fig)
 
-    else:
-        return fig
+	else:
+		return fig
 
 
 def plot_tpcf(pred_positions, 
 		label_positions, 
 		experiment=None):
-    """
+	"""
 	Plots the ratio of the predicted correlation function to the simulation's one.
 
 	Args:
@@ -124,20 +125,20 @@ def plot_tpcf(pred_positions,
 
 	"""
 
-    r_c, pred_tpcf = compute_tpcf(pred_positions)
-    r_c, label_tpcf = compute_tpcf(label_positions)
+	r_c, pred_tpcf = compute_tpcf(pred_positions)
+	r_c, label_tpcf = compute_tpcf(label_positions)
 
-    fig = plt.figure()
-    plt.plot(r_c, (pred_tpcf / label_tpcf), label="Random Forest")
+	fig = plt.figure()
+	plt.plot(r_c, (pred_tpcf / label_tpcf), label="Random Forest")
 
-    plt.axhline(y=1.0, color="gray", linestyle="dashed")
-    # plt.legend()
-    plt.ylim(0.8, 1.2)
-    plt.ylabel(r"$\hat{\xi}/\xi_{sim}$")
-    plt.xlabel(r"$r$ [Mpc/h]")
+	plt.axhline(y=1.0, color="gray", linestyle="dashed")
+	# plt.legend()
+	plt.ylim(0.8, 1.2)
+	plt.ylabel(r"$\hat{\xi}/\xi_{sim}$")
+	plt.xlabel(r"$r$ [Mpc/h]")
 
-    if experiment is not None:
-        experiment.log_figure(figure_name="2PCF", figure=fig)
+	if experiment is not None:
+		experiment.log_figure(figure_name="2PCF", figure=fig)
 
-    else:
-        return fig
+	else:
+		return fig

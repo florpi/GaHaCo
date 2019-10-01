@@ -32,9 +32,9 @@ def get_data(hdf5_filename: str, arg_label: str):
             columns=[
                 "N_gals",
                 # TODO: keep them, but somewhere else
-                #"ID_HYDRO",
-                #"ID_DMO",
-                #"M200_HYDRO",
+                "ID_HYDRO",
+                "ID_DMO",
+                "M200_HYDRO",
                 "M_stars",
                 "x_hydro",
                 "y_hydro",
@@ -47,9 +47,9 @@ def get_data(hdf5_filename: str, arg_label: str):
             columns=[
                 "N_gals",
                 # TODO: keep them, but somewhere else
-                #"ID_HYDRO",
-                #"ID_DMO",
-                #"M200_HYDRO",
+                "ID_HYDRO",
+                "ID_DMO",
+                "M200_HYDRO",
                 "M_stars",
                 "x_hydro",
                 "y_hydro",
