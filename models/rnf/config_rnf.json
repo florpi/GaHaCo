@@ -1,6 +1,6 @@
 {
     "label": "dark_or_light",
-    "sampling": "downsample",
+    "sampling": "upsample",
     "model": {
         "name": "rnf",
         "module": "sklearn.ensemble",
