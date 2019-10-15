@@ -132,8 +132,10 @@ def plot_tpcf(pred_positions,
 	plt.plot(r_c, (pred_tpcf / label_tpcf), label="Random Forest")
 
 	plt.axhline(y=1.0, color="gray", linestyle="dashed")
+	plt.axhline(y=1.01, color="maroon", linestyle="dashed")
+	plt.axhline(y=0.99, color="maroon", linestyle="dashed")
 	# plt.legend()
-	plt.ylim(0.8, 1.2)
+	plt.ylim(0.9, 1.1)
 	plt.ylabel(r"$\hat{\xi}/\xi_{sim}$")
 	plt.xlabel(r"$r$ [Mpc/h]")
 

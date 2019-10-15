@@ -21,14 +21,7 @@ matching_df = pd.read_csv(additional_data_path + matching_file,
 
 # Apply mass cut
 
-mass_matching_df = matching_df.loc[matching_df['M200_DMO'] > halo_mass_cut]
-
-# Select only those with one-to-one mapping
-
-idx, count = np.unique(mass_matching_df.ID_DMO, return_counts = True)
-
-unique_dmo_idx = idx[count == 1]
-unique_matching_df = mass_matching_df.loc[mass_matching_df.ID_DMO.isin(unique_dmo_idx)]
+mass_matching_df = matching_df.loc[matching_df['M200_HYDRO'] > halo_mass_cut]
 
 # ----------- Read in additionally halo properties from the dmo simulation
 
@@ -52,7 +45,7 @@ properties_df = pd.DataFrame(data = properties,
                              columns = ['ID_DMO', 'M200c', 'Rmax', 
                                         'R200c', 'Cnfw', 'Rhosnfw'])
 
-merged_matching_df = pd.merge(unique_matching_df, properties_df, on = ['ID_DMO'], how = 'inner')
+merged_matching_df = pd.merge(mass_matching_df, properties_df, on = ['ID_DMO'], how = 'inner')
 
  
 # ----------- Read in properties from the merger trees 
@@ -91,6 +84,16 @@ hydro_merged_df = pd.merge(dmo_merged_df, hydro_df, on = ['ID_HYDRO'], how = 'in
 
 np.testing.assert_allclose(hydro_merged_df.M200_HYDRO, hydro_merged_df.Group_M_Crit200, rtol = 1e-3)
 hydro_merged_df = hydro_merged_df.drop(columns = ['Group_M_Crit200', 'M200_DMO'])
+
+# Since matching is not 1-to-1, sum all the galaxies
+n_gals_total = hydro_merged_df.groupby('ID_DMO')['N_gals'].sum()
+# Drop duplicates
+no_duplicates_df = hydro_merged_df.drop_duplicates(subset = 'ID_DMO', keep = 'last')
+# Add column with total galaxies
+no_duplicates_df = pd.merge(no_duplicates_df, n_gals_total.to_frame('N_gals_total').reset_index())
+no_duplicates_df = no_duplicates_df.drop(columns = ['N_gals'])
+no_duplicates_df.rename(columns = {'N_gals_total':'N_gals'}, inplace = True)
+
 
 # Save final dataframe!
 
