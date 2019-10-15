@@ -89,7 +89,8 @@ def find_transition_regions(df: pd.DataFrame):
 
     mass_center = interpolator(0.5)
 
-    mass_end = ((mass_edges[1:] + mass_edges[:-1]) / 2.0)[nluminous == 1.0][0]
+	# TODO: check we should do this
+    mass_end = ((mass_edges[1:] + mass_edges[:-1]) / 2.0)[nluminous > 0.997][0]
 
     return mass_center, mass_end
 
