@@ -63,6 +63,8 @@ def main(model: str):
 	config_file_path = "../../models/%s/config_%s.json" % (model, model)
 	config = load_config(config_file_path=config_file_path)
 
+	experiment.add_tag(f'preprocessing = {config["sampling"]}')
+
 	# -------------------------------------------------------------------------
 	# Load and prepare datasets
 	# -------------------------------------------------------------------------
@@ -77,9 +79,11 @@ def main(model: str):
 	feature_names = train_df.drop(columns='labels').columns 
 
 	# Prepare datasets
-	## Balance training set in the transition region
 	center_transition, end_transition = find_transition_regions(train_df)
-	train_df = balance_dataset(train_df, center_transition, end_transition, config["sampling"])
+
+	if config["sampling"] !=  "None":
+		## Balance training set in the transition region
+		train_df = balance_dataset(train_df, center_transition, end_transition, config["sampling"])
 
 	train_features_df = train_df.drop(columns="labels")
 	train_labels = train_df["labels"]
