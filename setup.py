@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 setup(
-    name="src",
+    name="gahaco",
     packages=find_packages(),
     version="0.1.0",
     description="Analyze the galaxy halo connection found in hydordynamical simulations using Machine Learning techniques.",

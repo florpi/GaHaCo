@@ -5,6 +5,6 @@
         "name": "rnf",
         "module": "sklearn.ensemble",
         "class": "RandomForestClassifier",
-        "parameters": {"n_estimators": 500, "random_state": 0}
+        "parameters": {"n_estimators": 500, "random_state": 0, "class_weight": 'balanced'}
     }
 }
