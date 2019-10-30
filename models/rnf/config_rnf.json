@@ -1,10 +1,10 @@
 {
     "label": "dark_or_light",
-    "sampling": "downsample",
+    "sampling": "smote",
     "model": {
         "name": "rnf",
         "module": "sklearn.ensemble",
         "class": "RandomForestClassifier",
-        "parameters": {"n_estimators": 500, "random_state": 0, "class_weight": 'balanced'}
+        "parameters": {"n_estimators": 200, "random_state": 0, "class_weight": "balanced"}
     }
 }

@@ -1,10 +1,6 @@
 {
     "label": "dark_or_light",
     "sampling": "downsample",
-    "feature_optimization": {
-        "primary": "PCA",
-        "secondary": "PCA",
-    },
     "model": {
         "name": "lightgbm",
         "module": "lightgbm",
