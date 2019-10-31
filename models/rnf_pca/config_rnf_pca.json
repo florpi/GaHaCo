@@ -1,6 +1,6 @@
 {
     "label": "dark_or_light",
-    "sampling": "downsample",
+    "sampling": "None",
 	"feature_optimization": {"primary": "PCA", "secondary": "cross_val"},
     "model": {
         "name": "rnf",
