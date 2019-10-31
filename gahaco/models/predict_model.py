@@ -43,6 +43,6 @@ def prediction(train, test, arg_model):
             num_boost_round=50,
             early_stopping_rounds=10,
         )
-        
+
         # make prediction
         return model.predict(test["features"])
