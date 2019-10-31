@@ -1,15 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def halo_mass_function(mass):
+def halo_mass_function(mass, nbins=20):
     bins = np.logspace(11, np.log10(np.max(mass)), nbins+1)
     mass_count, edges = np.histogram(mass, bins=bins)
     mass_bin = (edges[1:]+edges[:-1])/2.
     return mass_count, mass_bin
 
     
-def plot_halo_mass_function(mass, color = 'black', label = 'default'):
-    nbins= 20
+def plot_halo_mass_function(mass, nbins=20, color='black', label='default'):
     
     if isinstance(mass, numpy.ndarray):
         mass_count, mass_bin = halo_mass_function(mass)
