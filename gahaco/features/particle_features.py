@@ -28,6 +28,9 @@ class ParticleSnapshot:
 	"""
 
     def __init__(self, h5_dir="/cosma7/data/TNG/TNG300-1-Dark/", snapshot_number=99):
+        """
+        Load data of particles that belong to resolved halos
+        """
 
         self.snapshot = read_hdf5.snapshot(
             snapshot_number, h5_dir, check_total_particle_number=True
@@ -115,23 +118,28 @@ class ParticleSnapshot:
 			bin_densities: density in randial bins
 		"""
 
-        min_rad = 0.05
-        max_rad = 1
-        bins = np.logspace(np.log10(min_rad), np.log10(max_rad), nbins + 1, base=10.0)
-        bin_radii = 0.5 * (bins[1:] + bins[:-1])
-
-        bin_volumes = 4.0 / 3.0 * np.pi * (bins[1:] ** 3 - bins[:-1] ** 3)
-
+        # particles that belong to halo halo_idx
         coordinates_in_halo = self.coordinates[
             self.cum_N_particles[halo_idx] : self.cum_N_particles[halo_idx]
             + self.N_particles[halo_idx]
         ]
 
+        # particle distances to halo centre
         r_particle_halo = (
             np.linalg.norm((coordinates_in_halo - self.halo_pos[halo_idx]), axis=1)
             / self.r200c[halo_idx]
         )
+        
+        # create radii bins
+        min_rad = 0.05
+        max_rad = 1
+        bins = np.logspace(np.log10(min_rad), np.log10(max_rad), nbins + 1, base=10.0)
+        bin_radii = 0.5 * (bins[1:] + bins[:-1])
 
+        # volumne enclosed by each radii bin
+        bin_volumes = 4.0 / 3.0 * np.pi * (bins[1:] ** 3 - bins[:-1] ** 3)
+
+        # profile
         number_particles = np.histogram(r_particle_halo, bins=bins)[0]
         bin_masses = number_particles * self.Mpart
         bin_densities = bin_masses / bin_volumes

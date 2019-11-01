@@ -134,7 +134,8 @@ def main(model: str):
         experiment=experiment,
     )
 
-    # Confusion matrix for objects below the central region, where most of the training set is dark objects
+    # Confusion matrix for objects below the central region, where most of the
+    # training set is dark objects
     low_mass_threshold = test_features_df.M200c.values < center_transition
     test_pred_low_mass = prediction(
         trained_model, test["features"][low_mass_threshold], config["model"]
@@ -148,7 +149,8 @@ def main(model: str):
         log_name="Low Mass",
     )
 
-    # Confusion matrix for objects that are above the central region but bellow the mass at which all objects are luminous.
+    # Confusion matrix for objects that are above the central region but bellow
+    # the mass at which all objects are luminous.
     # Here the training set is mostly luminous objects.
     high_mass_threshold = (test_features_df.M200c.values > center_transition) & (
         test_features_df.M200c.values < end_transition

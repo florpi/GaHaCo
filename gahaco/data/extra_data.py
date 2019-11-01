@@ -10,12 +10,7 @@ import pandas as pd
 
 
 class Catalog:
-    """
-
-	Class to describe a catalog and its methods
-
-
-	"""
+    """Class to describe a general catalog and its methods"""
 
     def __init__(self, h5_dir: str, snapnum: int):
         """
@@ -36,15 +31,15 @@ class Catalog:
 
     def load_immidiate_features(self, group_feature_list: list, sub_feature_list: list):
         """
-		Loads features already computed by SUBFIND + Bullock spin parameter
-		(http://iopscience.iop.org/article/10.1086/321477/fulltext/52951.text.html)
+		Loads features already computed by SUBFIND +
+        Bullock spin parameter (DOI: 10.1086/321477)
 
 		Args:
 			group_feature_list: list of group features to load and save as attributes of the class
 			sub_feature_list: list of subgroup features to load and save as attributes of the class
-
 		"""
 
+        # Subfind data
         for feature in group_feature_list:
             value = self.snapshot.cat[feature][self.halo_mass_cut]
             if ("Crit200" in feature) or ("Mass" in feature):
@@ -70,6 +65,10 @@ class Catalog:
                 value *= self.snapshot.header.hubble
             setattr(self, feature.replace("Subhalo", ""), value)
 
+        self.bound_mass = self.MassType[:, self.dm]
+        self.total_mass = self.GroupMassType[:, self.dm]
+        
+        # Bullock spin parameter
         self.Spin = (
             (np.linalg.norm(self.Spin, axis=1) / 3.0)
             / np.sqrt(2)
@@ -77,8 +76,6 @@ class Catalog:
             / self.v200c
         )
 
-        self.bound_mass = self.MassType[:, self.dm]
-        self.total_mass = self.GroupMassType[:, self.dm]
 
     def compute_x_offset(self):
         """
@@ -91,6 +88,7 @@ class Catalog:
         self.x_offset = (
             self.periodic_distance(self.GroupCM, self.GroupPos) / self.Group_R_Crit200
         )
+
 
     def compute_fsub_unbound(self):
         """
@@ -105,7 +103,8 @@ class Catalog:
     def Concentration_from_nfw(self):
         """
 
-		Fit NFW profile to the halo density profile of the dark matter particles to obtain r200c/rs.
+		Fit NFW profile to the halo density profile of the dark matter
+        particles to obtain r200c/rs.
 		Procedure defined in http://arxiv.org/abs/1104.5130.
 		Outputs: concentration, defined as r200c/rs
 				chi2_concentration, chi2 that determines goodness of fit
@@ -150,17 +149,17 @@ class Catalog:
             except:
                 concentration[i] = -1.0
                 chi2_concentration[i] = -1.0
+        
         return concentration, chi2_concentration
+
 
     def Environment_haas(self, f: float):
         """
-
 		Measure of environment that is not correlated with host halo mass http://arxiv.org/abs/1103.0547.
 		Outputs: haas_env, distance to the closest neighbor with a mass larger than f * m200c, divided by its r200c
 
 		Args:
 			f: threshold to select minimum mass of neighbor to consider.
-
 		"""
 
         haas_env = np.zeros(self.N_halos)
@@ -189,10 +188,11 @@ class Catalog:
 
         return haas_env
 
+
     def total_fsub(self):
         """
 		Fraction of mass bound to substructure compared to the halo mass.
-		Outputs: fsub, ratio of M_fof/M_bound
+		Returns: fsub, ratio of M_fof/M_bound
 		"""
         fsub = np.zeros((self.N_halos))
         for i in range(self.N_halos):
@@ -210,6 +210,7 @@ class Catalog:
 
         return fsub
 
+
     def periodic_distance(self, a: np.ndarray, b: np.ndarray) -> np.array:
         """
 		Computes distance between vectors a and b in a periodic box
@@ -226,24 +227,35 @@ class Catalog:
         dists = np.sqrt(np.sum(min_dists ** 2, axis=1))
         return dists
 
+
     def halo_shape(self):
         """
-
-		Describes the shape of the halo
-		http://arxiv.org/abs/1611.07991
-
+		Describes the shape of the halo through it's eigenvalues ratios
+        DOI: 10.1093/mnras/stx2238
 		"""
+        import gahaco.data.utils import shape
+
         inner = 0.15  # 0.15 *r200c (inner halo)
         outer = 1.0
         self.inner_q = np.zeros(self.N_halos)
         self.inner_s = np.zeros(self.N_halos)
         self.outer_q = np.zeros(self.N_halos)
         self.outer_s = np.zeros(self.N_halos)
+       
         for i in range(self.N_halos):
+            # Find all particles in this object
             coordinates_halo = self.coordinates[
                 self.group_offset[i] : self.group_offset[i] + self.N_particles[i], :
             ]
+
+            # Particle posiitons relative to object centre
             distance = (coordinates_halo - self.GroupPos[i]) / self.r200c[i]
+
+            if not self.principal_axis:
+                #TODO calculate principle axis of objects
+                self.principal_axis = shape.principal_axis()
+
+            # Calculate object's ellipsoidicity
             self.inner_q[i], self.inner_s[i], _, _ = ellipsoid.ellipsoidfit(
                 distance, self.r200c[i], 0, inner, weighted=True
             )
@@ -258,7 +270,6 @@ class Catalog:
 		Args:
 			output_filename: file to save hdf5 file.
 			features_to_save: list of feature names to save into file.
-
 		"""
 
         print(f"Saving their properties into {self.output_dir + output_filename}")
@@ -455,6 +466,7 @@ if __name__ == "__main__":
         "fsub_unbound",
         "x_offset",
         "GroupPos",
+        #"nfw_concentration",
     ]
     halocat.save_features("dmo_halos.hdf5", features_to_save)
 
