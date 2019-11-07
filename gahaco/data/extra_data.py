@@ -248,12 +248,12 @@ class Catalog:
                 self.group_offset[i] : self.group_offset[i] + self.N_particles[i], :
             ]
 
-            # Particle posiitons relative to object centre
+            # Particle positons relative to object centre
             distance = (coordinates_halo - self.GroupPos[i]) / self.r200c[i]
 
             if not self.principal_axis:
                 #TODO calculate principle axis of objects
-                self.principal_axis = shape.principal_axis()
+                self.principal_axis = shape.principal_axis(distance)
 
             # Calculate object's ellipsoidicity
             self.inner_q[i], self.inner_s[i], _, _ = ellipsoid.ellipsoidfit(
