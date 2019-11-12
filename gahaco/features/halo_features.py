@@ -107,7 +107,7 @@ class Catalog:
 		https://arxiv.org/abs/1911.02610
 
 		Args:
-			r_outer: radius of the outer sphere.
+			r_outer: radius of the outer sphere (in Mpc/h).
 
 		Returns:
 			env_per_halo: array of len number of halos, with the measure of environemnt 
@@ -115,10 +115,11 @@ class Catalog:
 		'''
 
 		# Load subhalos
-		subhalo_pos = self.snapshot.cat['SubhaloPos'][:]/1000.
+		r_outer = 1000. * r_outer # to kpc/h
+		subhalo_pos = self.snapshot.cat['SubhaloPos'][:]
 		subhalo_mass = self.snapshot.cat['SubhaloMass'][:]
 		# Construct tree with all subhalos
-		tree=cKDTree(subhalo_pos, boxsize=self.boxsize)
+		tree=cKDTree(subhalo_pos, boxsize=self.boxsize*1000.)
 		# For each halo, query around
 		r_inner = self.Group_R_Crit200 
 		outer_ids = tree.query_ball_point(self.GroupPos, r_outer)
@@ -247,7 +248,7 @@ class Catalog:
 		feature_list = []
 		for feature in features_to_save:
 			if feature != 'GroupPos':
-				if ('M_Crit' in feature) or ('Mass' in feature) or ('Spin' in feature):
+				if ('M_Crit' in feature) or ('Mass' in feature) or ('Spin' in feature) or ('mass' in feature):
 					feature_list.append(np.log10(getattr(self, feature)))
 				else:
 					feature_list.append(getattr(self, feature))
@@ -300,7 +301,6 @@ class HaloCatalog(Catalog):
 			"SubhaloCM",
 			"GroupCM",
 			"SubhaloMass",
-			"SubhaloMassInHalfRad",
 			"SubhaloSpin",
 			"SubhaloVelDisp",
 			"SubhaloVmax",
@@ -450,16 +450,18 @@ if __name__ == "__main__":
 	'''
 
 	env_5 = halocat.Environment_subhalos(5)
-	halocat.env_5 = env_5
+	halocat.env_5 = np.log10(env_5)
 	env_10 = halocat.Environment_subhalos(10)
-	halocat.env_10 = env_10
+	halocat.env_10 = np.log10(env_10)
 
 	features_to_save = ['ID_DMO','N_subhalos', 'Group_M_Crit200', 'Group_R_Crit200',
 			'VelDisp', 'Vmax', 'Spin', 'fsub_unbound', 'x_offset' , 'GroupPos',
-			"MassInHalfRad","HalfmassRad","MassInMaxRad",
+			"HalfmassRad","MassInMaxRad",
 			'env_5', 'env_10']
 	halocat.save_features('dmo_halos.hdf5', features_to_save)
 
+	'''
 	galcat = GalaxyCatalog()
 	features_to_save = ['ID_HYDRO','N_gals', 'M_stars', 'Group_M_Crit200', 'GroupPos']
 	galcat.save_features('hydro_galaxies.hdf5', features_to_save)
+	'''

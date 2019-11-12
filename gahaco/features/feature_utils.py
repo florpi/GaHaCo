@@ -35,20 +35,22 @@ def get_data(arg_label:str,
 	elif arg_label == "nr_of_galaxies":
 		df["labels"] = df.N_gals
 		df = df.drop(columns=drop_list)
+	elif arg_label == "stellar_mass":
+		df["labels"] = df.M_stars
+		df = df.drop(columns=drop_list)
 	elif arg_label == "both":
 		df["labels"] = df.N_gals > 0
 
 	return df.drop(columns="labels"), df.labels
 
-def load_positions(test_idx,
+def load_positions(test_idx = None,
 		path_to_file:str="/cosma6/data/dp004/dc-cues1/tng_dataframes/",
 		filename:str="merged_dataframe.h5",	
 		):
 	hdf5_filename = path_to_file + filename
 	df = pd.read_hdf(hdf5_filename, key="df", mode="r")
-	df=df.iloc[test_idx]
-	df = df.fillna(-9999.)
-
+	if test_idx is not None:
+		df=df.iloc[test_idx]
 	hydro_pos = np.vstack([df.x_hydro, df.y_hydro, df.z_hydro]).T
 	dmo_pos = np.vstack([df.x_dmo, df.y_dmo, df.z_dmo]).T
 	return hydro_pos, dmo_pos
