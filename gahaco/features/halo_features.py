@@ -384,8 +384,7 @@ class GalaxyCatalog(Catalog):
 
 		self.Group_M_Crit200 = self.snapshot.cat['Group_M_Crit200'][self.halo_mass_cut] * self.snapshot.header.hubble
 		self.GroupPos = self.snapshot.cat['GroupPos'][self.halo_mass_cut, :] 
-		self.N_gals, self.M_stars = self.Number_of_galaxies()
-		self.logM_stars = np.log10(self.M_stars)
+		self.N_gals, self.total_M_stars, self.M_stars = self.Number_of_galaxies()
 		print("%d resolved galaxies found." % np.sum(self.N_gals))
 
 		print("Minimum stellar mass : %.2E" % self.stellar_mass_thresh)
@@ -404,6 +403,7 @@ class GalaxyCatalog(Catalog):
 		"""
 		# Subhaloes defined as galaxies with a stellar mass larger than the threshold
 		N_gals = np.zeros((self.N_halos), dtype=np.int)
+		total_M_stars = np.zeros((self.N_halos), dtype=np.int)
 		M_stars = np.zeros((self.N_halos), dtype=np.int)
 		for i in range(self.N_halos):
 			N_gals[i] = np.sum(
@@ -414,15 +414,21 @@ class GalaxyCatalog(Catalog):
 				]
 				> self.stellar_mass_thresh
 			)
-			M_stars[i] = np.sum(
+			total_M_stars[i] = np.sum(
 				self.snapshot.cat["SubhaloMassType"][
 					self.subhalo_offset[i] : self.subhalo_offset[i]
 					+ self.N_subhalos[i],
 					self.stars,
 				]
 			)
+			M_stars[i] = np.sum(
+					self.snapshot.cat["SubhaloMassType"][
+						self.subhalo_offset[i] : self.subhalo_offset[i] + 1,
+						self.stars,
+						]
+					)
 
-		return N_gals, M_stars
+		return N_gals,total_M_stars,  M_stars
 
 
 
@@ -447,7 +453,6 @@ if __name__ == "__main__":
 	env_10 = partial(halocat.Environment_haas, 10)
 	haas_env_10 = pool.map(env_10, range(halocat.N_halos))
 	halocat.haas_env_10 = haas_env_10
-	'''
 
 	env_5 = halocat.Environment_subhalos(5)
 	halocat.env_5 = np.log10(env_5)
@@ -462,6 +467,5 @@ if __name__ == "__main__":
 
 	'''
 	galcat = GalaxyCatalog()
-	features_to_save = ['ID_HYDRO','N_gals', 'M_stars', 'Group_M_Crit200', 'GroupPos']
+	features_to_save = ['ID_HYDRO','N_gals', 'M_stars', 'total_M_stars', 'Group_M_Crit200', 'GroupPos']
 	galcat.save_features('hydro_galaxies.hdf5', features_to_save)
-	'''

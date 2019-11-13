@@ -171,7 +171,6 @@ if __name__ == "__main__":
 	features2save = np.vstack([snap.ID_DMO, prada_concentration,
 		snap.concentration, snap.rho_s, snap.chisq, snap.m200c]).T
 
-	print(features2save.shape)
 
 	df = pd.DataFrame(data = features2save,
 					columns = ['ID_DMO', 'concentration_prada', 'concentration_nfw', 'rho_s', 'chisq_nfw', 'm200c']

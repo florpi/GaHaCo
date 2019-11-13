@@ -22,7 +22,7 @@ def get_data(arg_label:str,
 	df = df.fillna(-9999.)
 
 	ids = df.ID_DMO
-	drop_list=["N_gals", "M_stars", 
+	drop_list=["N_gals", "M_stars", "total_M_stars",
 			"x_hydro", "y_hydro", "z_hydro", 
 			"x_dmo", "y_dmo", "z_dmo",
 			"M200_HYDRO", "ID_HYDRO", "ID_DMO",
@@ -36,7 +36,8 @@ def get_data(arg_label:str,
 		df["labels"] = df.N_gals
 		df = df.drop(columns=drop_list)
 	elif arg_label == "stellar_mass":
-		df["labels"] = df.M_stars
+		df["labels"] = np.log10(df.M_stars)
+		df["labels"] = df["labels"].replace([-np.inf, np.inf], 0.)
 		df = df.drop(columns=drop_list)
 	elif arg_label == "both":
 		df["labels"] = df.N_gals > 0
