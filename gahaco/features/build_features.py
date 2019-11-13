@@ -6,6 +6,7 @@ import numpy as np
 additional_data_path = '/cosma5/data/dp004/hvrn44/HOD/'
 output_file = 'merged_dataframe.h5'
 data_path = '/cosma6/data/dp004/dc-cues1/tng_dataframes/'
+anisotropy_path = "/cosma7/data/dp004/dc-beck3/vel_ani_param.hdf5"
 dmo_file =	'dmo_halos.hdf5'
 hydro_file = 'hydro_galaxies.hdf5'
 matching_file = 'MatchedHaloes_L205n2500.dat'
@@ -80,6 +81,11 @@ particle_df = pd.read_hdf(data_path + halo_profiles_file)
 particle_df = particle_df.drop(columns = ['m200c'])
 
 dmo_merged_df = pd.merge(dmo_merged_df, particle_df, on=['ID_DMO'])
+# Add velocity anisotropy
+anisotropy_df = pd.read_hdf(anisotropy_path)
+anisotropy_df = anisotropy_df.drop(columns=['index'])
+
+dmo_merged_df = pd.merge(dmo_merged_df, anisotropy_df, on=['ID_DMO'])
 
 # ----------- Read in properties from tng hydro 
 hydro_df = pd.read_hdf(data_path + hydro_file)
