@@ -1,10 +1,6 @@
 {
     "label": "dark_or_light",
     "sampling": "downsample",
-    "feature_optimization": {
-        "primary": "PCA",
-        "secondary": "PCA",
-    },
     "model": {
         "name": "lightgbm",
         "module": "lightgbm",
@@ -14,7 +10,7 @@
             "metric": "auc",
             "is_unbalance": "false",
             "boosting": "gbdt",
-            "num_leaves": 10,
+            "num_leaves": 50,
             "feature_fraction": 1,
             "bagging_fraction": 1,
             "bagging_freq": 0,

@@ -1,11 +1,17 @@
 {
     "label": "dark_or_light",
-    "sampling": "downsample",
-    "feature_optimization": {"primary": "PCA", "secondary": "cross_val"},
+    "sampling": {"module": "imblearn.under_sampling",
+				"method": "RandomUnderSampler"},
     "model": {
         "name": "rnf",
         "module": "sklearn.ensemble",
         "class": "RandomForestClassifier",
-        "parameters": {"n_estimators": 500, "random_state": 0}
-    }
+        "parameters": {"n_estimators": 200, "random_state": 0, "class_weight": "balanced"}
+    },
+	"metric": {
+		"module": "sklearn.metrics",
+		"method": "f1_score",
+		"params": {"average":"weighted"}
+	}
+
 }

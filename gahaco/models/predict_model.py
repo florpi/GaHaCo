@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 import lightgbm
+<<<<<<< HEAD
 
 # import xgboost
 
@@ -46,3 +47,18 @@ def prediction(train, test, arg_model):
 
         # make prediction
         return model.predict(test["features"])
+=======
+# import xgboost
+
+
+def prediction(model, test_features, arg_model=None):
+	"""
+	"""
+
+	if arg_model["module"] == "lightgbm":
+		probabilities = model.predict(test_features, num_iteration=model.best_iteration)
+		return  probabilities > 0.50
+	else:
+		return model.predict(test_features)
+
+>>>>>>> florpi
