@@ -13,4 +13,4 @@
 export XDG_RUNTIME_DIR=/cosma/home/dp004/dc-cues1/newdir/
 export QT_QPA_PLATFORM='offscreen'
 
-python train_model.py --np $SLURM_NTASKS --upload=False --n_splits=4 --mass_balance=False --model rnf_reg
+python train_model.py --np $SLURM_NTASKS --upload=False --n_splits=4
