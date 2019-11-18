@@ -1,6 +1,7 @@
 {
     "label": "dark_or_light",
-    "sampling": "downsample",
+    "sampling": {"module": "imblearn.under_sampling",
+				"method": "RandomUnderSampler"},
     "model": {
         "name": "lightgbm",
         "module": "lightgbm",
@@ -17,5 +18,14 @@
             "learning_rate": 0.05,
             "verbose": 0
         }
-    }
+    },
+	"metric": {
+		"module": "sklearn.metrics",
+		"method": "f1_score",
+		"params": {"average":"binary"}
+	},
+	"feature_optimization":{
+		"PCA": 0,
+		"measure_importance": 0
+	}
 }

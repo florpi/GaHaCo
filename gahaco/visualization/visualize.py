@@ -9,9 +9,9 @@ from sklearn.utils.multiclass import unique_labels
 from scipy.stats import binned_statistic
 
 RENAME_DICT = {'M200c':r'$M_{200c}$', 'R200c':r'$R_{200c}$','VelDisp': r'$\sigma_v$',
-			'concentration_prada': r'$c_{prada}$', 'Rhosnfw': r'$\rho_{NFW}$',
+			'concentration_prada': r'$c_{prada}$', 'Rhosnfw': r'$\rho_{s, prada}$',
 			'env_5': r'$\Delta M_5$', 'chisq_nfw': r'$\chi^2_{NFW}$',
-			'vpeak': r'$V_{peak}$', 'rho_s': r'$\rho_s$', 'HalfmassRad': r'$r_{1/2}$',
+			'vpeak': r'$V_{peak}$', 'rho_s': r'$\rho_{s, NFW}$', 'HalfmassRad': r'$r_{1/2}$',
 			'N_subhalos': r'Nsubhalos',
 			'env_10': r'$\Delta M_{10}$', 'concentration_nfw': r'$c_{NFW}$',
 			'vel_ani_param': r'$\beta_v$', 'fsub_unbound':'unbound fraction',

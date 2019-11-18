@@ -12,7 +12,7 @@ from imblearn.over_sampling import SMOTE
 
 
 def get_data(arg_label:str,
-		path_to_file:str="/cosma6/data/dp004/dc-cues1/tng_dataframes/",
+		path_to_file:str="/cosma7/data/dp004/dc-cues1/tng_dataframes/",
 		filename:str="merged_dataframe.h5",	
 			):
 	"""
@@ -45,7 +45,7 @@ def get_data(arg_label:str,
 	return df.drop(columns="labels"), df.labels
 
 def load_positions(test_idx = None,
-		path_to_file:str="/cosma6/data/dp004/dc-cues1/tng_dataframes/",
+		path_to_file:str="/cosma7/data/dp004/dc-cues1/tng_dataframes/",
 		filename:str="merged_dataframe.h5",	
 		):
 	hdf5_filename = path_to_file + filename

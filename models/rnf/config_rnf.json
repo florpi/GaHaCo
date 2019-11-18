@@ -11,7 +11,11 @@
 	"metric": {
 		"module": "sklearn.metrics",
 		"method": "f1_score",
-		"params": {"average":"weighted"}
+		"params": {"average":"binary"}
+	},
+	"feature_optimization":{
+		"PCA": 0,
+		"measure_importance": 0
 	}
 
 }

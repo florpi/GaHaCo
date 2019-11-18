@@ -30,7 +30,7 @@ def dropcol(model, X_train, y_train,
         X = X_train.drop(col, axis=1)
         X_ = X_test.drop(col, axis=1)
         model_ = clone(model)
-        model_.random_state = 999
+        #model_.random_state = 999
         model_.fit(X, y_train)
         drop_column = test_set_metric(model_, X_, y_test, metric, metric_params)
         imp.append(baseline_metric - drop_column)
