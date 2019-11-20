@@ -1,21 +1,22 @@
 {
     "label": "dark_or_light",
     "sampling": {"module": "imblearn.under_sampling",
-				"method": "RandomUnderSampler"},
+                "method": "RandomUnderSampler"},
     "model": {
         "name": "rnf",
         "module": "sklearn.ensemble",
         "class": "RandomForestClassifier",
         "parameters": {"n_estimators": 200, "random_state": 0, "class_weight": "balanced"}
     },
-	"metric": {
-		"module": "sklearn.metrics",
-		"method": "balanced_accuracy_score",
-		"params": {}
-	},
-	"feature_optimization":{
-		"PCA": 0,
-		"measure_importance": 1
-	}
+    "metric": {
+        "module": "sklearn.metrics",
+        "method": "f1_score",
+        "params": {}
+    },
+    "feature_optimization":{
+        "PCA": 0,
+        "measure_importance": 1,
+        "uncorrelated": 1
+    }
 
 }
