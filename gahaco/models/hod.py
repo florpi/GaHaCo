@@ -13,11 +13,11 @@ class HOD():
         n_centrals = labels 
 
         nbins = 20
-        mass_bins = np.logspace(np.log10(np.min(m200c)), np.log10(np.max(m200c)), 
+        mass_bins = np.logspace(np.log10(np.min(self.m200c)), np.log10(np.max(self.m200c)), 
                 nbins + 1)
         self.mass_c = 0.5 * (mass_bins[1:] + mass_bins[:-1])
 
-        self.measured_n_central, _, _ = binned_statistic(m200c, n_centrals, 
+        self.measured_n_central, _, _ = binned_statistic(self.m200c, n_centrals, 
                                                     statistic = 'mean',
                                                     bins=mass_bins)
 

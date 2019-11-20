@@ -89,7 +89,7 @@ def main(argv):
 
     # Load dataset
     features, labels = get_data(config["label"])
-    m200c = features.M200c
+    m200c = features.M200c.values
 
     if "feature_optimization" in config.keys():
         if config['feature_optimization']['PCA']: 
@@ -100,7 +100,7 @@ def main(argv):
 
             feature_names = [f"PCA_{i}" for i in range(train["features"].shape[1])]
         elif config['feature_optimization']['uncorrelated']:
-            gini_importances = np.loadtxt('gini_importances.csv')
+            gini_importances = np.loadtxt(f'../../models/{FLAGS.model}/gini_importances.csv')
             features = select_uncorrelated_features(features, gini_importances)
 
 
@@ -220,8 +220,9 @@ def main(argv):
                                     experiment=experiment)
 
         if not config['feature_optimization']['uncorrelated']:
-            np.savetxt('gini_importances.csv', np.mean(gini_importance, axis=0))
-    #experiment.add_tag(f'preprocessing = {config["sampling"]["method]}')
+            np.savetxt(f'../../models/{FLAGS.model}/gini_importances.csv', np.mean(gini_importance, axis=0))
+    sampling_method = config['sampling']['method']
+    experiment.add_tag(f'sampling = {sampling_method}')
     experiment.add_tag(f'classifier = {FLAGS.model}')
 
     print('All good :)')
