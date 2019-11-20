@@ -10,12 +10,12 @@
     },
 	"metric": {
 		"module": "sklearn.metrics",
-		"method": "f1_score",
-		"params": {"average":"binary"}
+		"method": "balanced_accuracy_score",
+		"params": {}
 	},
 	"feature_optimization":{
 		"PCA": 0,
-		"measure_importance": 0
+		"measure_importance": 1
 	}
 
 }
