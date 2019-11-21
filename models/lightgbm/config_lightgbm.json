@@ -1,10 +1,7 @@
 {
     "label": "dark_or_light",
-    "sampling": "downsample",
-    "feature_optimization": {
-        "primary": "PCA",
-        "secondary": "PCA",
-    },
+    "sampling": {"module": "imblearn.under_sampling",
+				"method": "RandomUnderSampler"},
     "model": {
         "name": "lightgbm",
         "module": "lightgbm",
@@ -14,12 +11,21 @@
             "metric": "auc",
             "is_unbalance": "false",
             "boosting": "gbdt",
-            "num_leaves": 10,
+            "num_leaves": 50,
             "feature_fraction": 1,
             "bagging_fraction": 1,
             "bagging_freq": 0,
             "learning_rate": 0.05,
             "verbose": 0
         }
-    }
+    },
+	"metric": {
+		"module": "sklearn.metrics",
+		"method": "f1_score",
+		"params": {"average":"binary"}
+	},
+	"feature_optimization":{
+		"PCA": 0,
+		"measure_importance": 0
+	}
 }
