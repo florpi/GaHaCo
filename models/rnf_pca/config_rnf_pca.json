@@ -1,0 +1,11 @@
+{
+    "label": "dark_or_light",
+    "sampling": "None",
+	"feature_optimization": {"primary": "PCA", "secondary": "cross_val"},
+    "model": {
+        "name": "rnf",
+        "module": "sklearn.ensemble",
+        "class": "RandomForestClassifier",
+        "parameters": {"n_estimators": 500, "random_state": 0}
+    }
+}
