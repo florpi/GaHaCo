@@ -231,8 +231,7 @@ class ParticleSnapshot:
             self.principal_axis = shape.principal_axis(
                 rel_part_pos, rvir, rin, rout, False, False, 1e-2
             )
-    
-            
+
     def velocity_anisotropy(self):
         """
         Get the velocity anisotropy parameter.
@@ -305,4 +304,4 @@ if __name__ == "__main__":
     
     # Save features to file
     output_dir = "/cosma6/data/dp004/dc-cues1/tng_dataframes/"
-    df.to_hdf(output_dir + "halo_profiles.hdf5", key="df", mode="w")
+    df.to_hdf(output_dir + "halo_particle_summary.hdf5", key="df", mode="w")
