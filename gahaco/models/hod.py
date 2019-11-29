@@ -89,8 +89,8 @@ class HOD():
 
     def populate_satellites(self, n_centrals):
 
-        n_satellites = (np.random.poisson(self.mean_occupation_satellites(self.m200c, **self.hod_parameters_sats),
-                                         len(self.m200c)))
+        n_satellites = np.random.poisson(self.mean_occupation_satellites(self.m200c, **self.hod_parameters_sats),
+                                         len(self.m200c))
 
         exception = (n_centrals == 0) & (n_satellites!=0)
         n_satellites[exception] -= 1
@@ -102,25 +102,26 @@ class HOD():
 
         R_s = r200c/concentration
         fc = np.log(1. + concentration) - concentration / (1. + concentration)
-
-
         Rho_s = self.m200c / (4*np.pi*R_s**3 * fc)
+        satellite_positions = np.zeros((np.sum(n_satellites), 3))
+        satellite_counter = 0
+        for halo in range(len(halo_pos)):
+            theta  = np.arccos(2.0 * np.random.ranf(n_satellites[halo]) - 1.0)
+            phi = 2.0 * np.pi * np.random.ranf(n_satellites[halo])
+            M_rand   = self.m200c[halo]* np.random.ranf(n_satellites[halo])
+            r = 10.0**(np.arange(-5.0, 0.05, 0.05)) * r200c[halo]
+            Mnfw = 4. * np.pi * Rho_s[halo] * R_s[halo]**3 * (np.log(1.+r/R_s[halo]) - (r/R_s[halo])/(1.+r/R_s[halo]))
+            rp = np.interp(M_rand, Mnfw, r)
+            xp = rp * np.sin(theta) * np.cos(phi)
+            yp = rp * np.sin(theta) * np.sin(phi)
+            zp = rp * np.cos(theta)
 
-        Mnfw_r200 = 4. * np.pi * Rho_s * R_s**3 * fc
-        r   = 10.0**(np.arange(-5.0, 0.05, 0.05)) * R200c
-        print(r)
-        theta  = np.arccos(2.0 * np.random.ranf(Ns[i]) - 1.0)
-        phi = 2.0 * np.pi * np.random.ranf(Ns[i])
-        M_rand   = self.M200c * np.random.ranf(Ns[i])
-        Mnfw = 4. * np.pi * Rho_s[i] * Rs[i]**3 * (np.log(1.+r/Rs[i]) - (r/Rs[i])/(1.+r/Rs[i]))
-        rp       = np.interp(M_rand, Mnfw, r)
-        xp        = rp * np.sin(theta) * np.cos(phi)
-        yp        = rp * np.sin(theta) * np.sin(phi)
-        zp        = rp * np.cos(theta)
+            satellite_positions[satellite_counter:satellite_counter+n_satellites[halo],:] = halo_pos[halo,:] 
+            satellite_positions[satellite_counter:satellite_counter+n_satellites[halo],0] +=  xp/1000.
+            satellite_positions[satellite_counter:satellite_counter+n_satellites[halo],1] += yp/1000.
+            satellite_positions[satellite_counter:satellite_counter+n_satellites[halo],2] += zp/1000.
 
-        xs = halo_pos[i,0] + xp/1000.
-        ys = halo_pos[i,1] + yp/1000.
-        zs = halo_pos[i,2] + yp/1000.
+            satellite_counter += n_satellites[halo]
 
 
-        return n_centrals, n_satellites
+        return satellite_positions 

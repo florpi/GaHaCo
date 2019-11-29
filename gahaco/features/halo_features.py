@@ -37,7 +37,7 @@ class Catalog:
         self.dm = 1
         self.stars = 4
         self.dm_particle_mass = self.snapshot.header.massarr[self.dm] * 1.0e10
-        self.output_dir = '/cosma6/data/dp004/dc-cues1/tng_dataframes/'
+        self.output_dir = '/cosma7/data/dp004/dc-cues1/tng_dataframes/'
         self.n_cores = n_cores
 
     def load_inmidiate_features(self, 
@@ -358,6 +358,7 @@ class GalaxyCatalog(Catalog):
 
         sub_properties = [
             "SubhaloMassType",
+            "SubhaloPos",
         ]
 
         self.snapshot.group_catalog(group_properties + sub_properties)
@@ -385,6 +386,7 @@ class GalaxyCatalog(Catalog):
         self.Group_M_Crit200 = self.snapshot.cat['Group_M_Crit200'][self.halo_mass_cut] * self.snapshot.header.hubble
         self.GroupPos = self.snapshot.cat['GroupPos'][self.halo_mass_cut, :] 
         self.N_gals, self.total_M_stars, self.M_stars = self.Number_of_galaxies()
+        self.pos_gals = self.galaxy_positions()
         print("%d resolved galaxies found." % np.sum(self.N_gals))
 
         print("Minimum stellar mass : %.2E" % self.stellar_mass_thresh)
@@ -404,8 +406,17 @@ class GalaxyCatalog(Catalog):
         # Subhaloes defined as galaxies with a stellar mass larger than the threshold
         N_gals = np.zeros((self.N_halos), dtype=np.int)
         total_M_stars = np.zeros((self.N_halos), dtype=np.int)
-        M_stars = np.zeros((self.N_halos), dtype=np.int)
+        M_stars_central = np.zeros((self.N_halos), dtype=np.int)
         for i in range(self.N_halos):
+            '''
+            first_subhalo = self.subhalo_offset[i] 
+            last_subhalo = self.subhalo_offset[i] + self.N_subhalos[i]
+
+            luminous_subhalos =  self.snapshot.cat["SubhaloMassType"][first_subhalo:last_subhalo,
+                    self.stars] > self.stellar_mass_thresh
+
+            '''
+
             N_gals[i] = np.sum(
                 self.snapshot.cat["SubhaloMassType"][
                     self.subhalo_offset[i] : self.subhalo_offset[i]
@@ -421,15 +432,31 @@ class GalaxyCatalog(Catalog):
                     self.stars,
                 ]
             )
-            M_stars[i] = np.sum(
+            M_stars_central[i] = np.sum(
                     self.snapshot.cat["SubhaloMassType"][
                         self.subhalo_offset[i] : self.subhalo_offset[i] + 1,
                         self.stars,
                         ]
                     )
 
-        return N_gals,total_M_stars,  M_stars
+        return N_gals,total_M_stars,  M_stars_central 
 
+    def galaxy_positions(self):
+
+        gals_offset = np.cumsum(self.N_gals) - self.N_gals
+        pos_gals = np.zeros((np.sum(self.N_gals), 3))
+        for i in range(self.N_halos):
+            first_galaxy = gals_offset[i]
+            last_galaxy = gals_offset[i] + self.N_gals[i]
+            first_subhalo = self.subhalo_offset[i] 
+            last_subhalo = self.subhalo_offset[i] + self.N_subhalos[i]
+
+            luminous_subhalos =  self.snapshot.cat["SubhaloMassType"][first_subhalo:last_subhalo,
+                    self.stars] > self.stellar_mass_thresh
+
+            pos_gals[first_galaxy:last_galaxy,:] = self.snapshot.cat['SubhaloPos'][first_subhalo:last_subhalo,:][luminous_subhalos]
+
+        return pos_gals
 
 
 if __name__ == "__main__":
@@ -438,9 +465,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(f'There are {args.n_cpu} cores available')
 
+    '''
     halocat = HaloCatalog(n_cores=args.n_cpu)
     
-    '''
     pool = Pool(processes = args.n_cpu)
     env_01 = partial(halocat.Environment_haas, 0.1)
     haas_env_01 = pool.map(env_01, range(halocat.N_halos))
@@ -467,5 +494,6 @@ if __name__ == "__main__":
 
     '''
     galcat = GalaxyCatalog()
-    features_to_save = ['ID_HYDRO','N_gals', 'M_stars', 'total_M_stars', 'Group_M_Crit200', 'GroupPos']
-    galcat.save_features('hydro_galaxies.hdf5', features_to_save)
+    #features_to_save = ['ID_HYDRO','N_gals', 'M_stars', 'total_M_stars', 'Group_M_Crit200', 'GroupPos']
+    #galcat.save_features('hydro_galaxies.hdf5', features_to_save)
+    np.save(galcat.output_dir + 'galaxy_positions', galcat.pos_gals)
