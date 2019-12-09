@@ -36,8 +36,8 @@ from gahaco.features.correlation import select_uncorrelated_features
 # Flags 
 # -----------------------------------------------------------------------------
 flags.DEFINE_string('model', 'rnf', 'model to run') # name ,default, help
-flags.DEFINE_integer('np', 10, 'Number of processes to run') 
-flags.DEFINE_integer('n_splits', 1, 'Number of folds for cross-validation') 
+flags.DEFINE_integer('np', 1, 'Number of processes to run') 
+flags.DEFINE_integer('n_splits', 4, 'Number of folds for cross-validation') 
 flags.DEFINE_boolean('upload', True, 'upload model to comet.ml, otherwise save in temporary folder') 
 flags.DEFINE_boolean('optimize_model', True, 'use comet.ml to perform hyper-param. optimization.') 
 flags.DEFINE_boolean('logging', False, 'save log files') 

@@ -15,7 +15,7 @@ import os
 # -----------------------------------------------------------------------------
 
 
-def load_config(config_file_path: str) -> dict:
+def load_config(config_file_path: str, purpose: str) -> dict:
     """
     Load and amend an experiment configuration.
     Args:
