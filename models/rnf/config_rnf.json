@@ -1,7 +1,7 @@
 {
     "label": "dark_or_light",
-    "sampling": {"module": "imblearn.under_sampling",
-                "method": "RandomUnderSampler"},
+    "sampling": {"module": "imblearn.over_sampling",
+                "method": "ADASYN"},
     "model": {
         "name": "rnf",
         "module": "sklearn.ensemble",
@@ -24,7 +24,7 @@
     "feature_optimization":{
         "PCA": 0,
         "measure_importance": 1,
-        "uncorrelated": 1
+        "uncorrelated": 0
     }
 
 }

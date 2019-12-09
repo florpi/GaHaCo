@@ -12,7 +12,7 @@ hydro_file = 'hydro_galaxies.hdf5'
 matching_file = 'MatchedHaloes_L205n2500.dat'
 additional_properties_file = 'HaloProfiles_DMO_z0.00_ext.hdf5'
 mergertree_file = 'MergerTree_L205n2500TNG_DM_ext_New.hdf5'
-halo_profiles_file = 'halo_profiles.hdf5'
+halo_particles_file = 'halo_particle_summary.hdf5'
 halo_mass_cut = 1.e11
 
 # ------------------ Halo matching between dmo and hydro simulations
@@ -77,7 +77,7 @@ np.testing.assert_allclose(10**dmo_merged_df.R200c, dmo_merged_df.Group_R_Crit20
 dmo_merged_df = dmo_merged_df.drop(columns = ['Group_R_Crit200'])
 
 # ----------- Read in properties from tng particle data
-particle_df = pd.read_hdf(data_path + halo_profiles_file)
+particle_df = pd.read_hdf(data_path + halo_particles_file)
 particle_df = particle_df.drop(columns = ['m200c'])
 
 dmo_merged_df = pd.merge(dmo_merged_df, particle_df, on=['ID_DMO'])

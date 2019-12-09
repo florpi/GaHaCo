@@ -213,12 +213,12 @@ class ParticleSnapshot:
                 self.concentration[halo_idx] = -9999
                 self.chisq[halo_idx] = -9999
 
-            
+                
     def velocity_anisotropy(self, radius):
         """
         Get the velocity anisotropy parameter.
         (DOI: 10.1016/j.nuclphysbps.2009.07.010; arxiv: 0810.3676)
-		"""
+		    """
         if radius is "2500":
             self.vmax_r2500 = np.zeros(self.N_halos)
             self.vrms_r2500 = np.zeros(self.N_halos)
