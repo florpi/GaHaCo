@@ -187,63 +187,32 @@ class ParticleSnapshot:
             bin_radii, bin_densities = self.get_profile(halo_idx, 'density', nbins)
             self.profiles_radii[halo_idx, :] = bin_radii
             self.profiles_value[halo_idx, :] = bin_densities
-            #fit_densities = bin_densities[bin_densities > 0.0]
-            #fit_radii = bin_radii[bin_densities > 0.0]
+            fit_densities = bin_densities[bin_densities > 0.0]
+            fit_radii = bin_radii[bin_densities > 0.0]
 
-            #if (len(fit_densities) > 2) & (self.N_particles[halo_idx] >= 5000):
-            #    try:
-            #        popt, pcov = curve_fit(
-            #            nfw,
-            #            fit_radii,
-            #            np.log10(fit_densities),
-            #            p0=(8000 * rho_crit, 5.0),
-            #        )
-            #    except:
-            #        popt = (-9999, -9999)
+            if (len(fit_densities) > 2) & (self.N_particles[halo_idx] >= 5000):
+                try:
+                    popt, pcov = curve_fit(
+                        nfw,
+                        fit_radii,
+                        np.log10(fit_densities),
+                        p0=(8000 * rho_crit, 5.0),
+                    )
+                except:
+                    popt = (-9999, -9999)
 
-            #    self.rho_s[halo_idx] = popt[0]
-            #    self.concentration[halo_idx] = popt[1]
-            #    fit = nfw(fit_radii, *popt)
-            #    self.chisq[halo_idx] = (
-            #        1 / len(bin_radii) * np.sum((np.log10(fit_densities) - fit) ** 2)
-            #    )
+                self.rho_s[halo_idx] = popt[0]
+                self.concentration[halo_idx] = popt[1]
+                fit = nfw(fit_radii, *popt)
+                self.chisq[halo_idx] = (
+                    1 / len(bin_radii) * np.sum((np.log10(fit_densities) - fit) ** 2)
+                )
 
-            #else:
-            #    self.rho_s[halo_idx] = -9999
-            #    self.concentration[halo_idx] = -9999
-            #    self.chisq[halo_idx] = -9999
+            else:
+                self.rho_s[halo_idx] = -9999
+                self.concentration[halo_idx] = -9999
+                self.chisq[halo_idx] = -9999
 
-
-    #def principal_axis(self):
-    #    """
-	#	 """
-    #    import gahaco.features.utils import shape
-    #    
-    #    for halo in range(self.N_halos):
-    #        # Find all particles in this object
-    #        coordinates_halo = self.coordinates[
-    #        self.group_offset[halo] : self.group_offset[halo] + self.N_particles[halo], :
-    #        ]
-
-    #        # Particle positons relative to object centre
-    #        rel_part_pos = (coordinates_halo - self.halo_pos[halo]) / self.r200c[halo]
-
-    #        # radii in which to find principal axis
-    #        logr=np.linspace(np.log10(rmin),np.log10(rmax),nbins)
-    #        rin=10**(logr-binwidth/2.)
-    #        rout=10**(logr+binwidth/2.)
-
-    #        if useR200==True:
-    #            pos/=rvir
-    #        else:
-    #            rin=rin*300
-    #            rout=rout*300
-    #            rvir=1.
-
-    #        self.principal_axis = shape.principal_axis(
-    #            rel_part_pos, rvir, rin, rout, False, False, 1e-2
-    #        )
-    
             
     def velocity_anisotropy(self, radius):
         """
@@ -290,70 +259,43 @@ class ParticleSnapshot:
             # the velocity anisotropy parameter
             self.vel_ani_param[halo] = 1 - 0.5*(sigma_t**2/sigma_r**2)
 
-    #def _get_mass_in_rad():
-
-
-    #def r2500_summary(self):
-    #    """
-    #    Get summary statistics of halos within R2500.
-	#	"""
-    #    output_dir = "/cosma6/data/dp004/dc-cues1/tng_dataframes/"
-    #    self.R2500c = np.zeros(self.N_halos)
-    #    self.M2500c = np.zeros(self.N_halos)
-
-    #    profiles = {}
-    #    with h5py.File(output_dir + "halo_particle_profiles.hdf5", 'r') as f:
-    #        print(f.keys())
-    #        profiles[f.keys()] = list(f.keys())[0]
-
-    #    rho_crit = 3*H**2/(8*np.pi*G)
-    #    for halo_idx in range(len(profiles["ID_DMO"])):
-    #        self.R2500c[halo_idx] = profiles["values"][
-    #            halo_idx,
-    #            np.argmin(np.where(profiles["values"] >= rho_crit)[0])
-    #        ]
-    #        self.M2500(radius)
-    #        self.beta_v(radius)
-
-    #    #np.where(denisty/rho_crit >= 2500)
-
 
 if __name__ == "__main__":
 
     snap = ParticleSnapshot()
 
     # calculate properties
-    #snap.concentration('prada')
-    #snap.principal_axis()
+    snap.concentration('prada')
     snap.fit_nfw()
-    #snap.velocity_anisotropy()
+    snap.velocity_anisotropy()
+    snap.get_profile()
     #snap.r2500_summary()
 
     #
     # Store scalar features in pandas dataframe
     #
-    #features2save = np.vstack(
-    #    [
-    #        snap.ID_DMO,
-    #        prada_concentration,
-    #        snap.concentration,
-    #        snap.rho_s,
-    #        snap.chisq,
-    #        snap.m200c,
-    #    ]
-    #).T
-    #df = pd.DataFrame(
-    #    data=features2save,
-    #    columns=[
-    #        "ID_DMO",
-    #        "concentration_prada",
-    #        "concentration_nfw",
-    #        "rho_s",
-    #        "chisq_nfw",
-    #        "m200c",
-    #    ],
-    #)
-    #
+    features2save = np.vstack(
+        [
+            snap.ID_DMO,
+            prada_concentration,
+            snap.concentration,
+            snap.rho_s,
+            snap.chisq,
+            snap.m200c,
+        ]
+    ).T
+    df = pd.DataFrame(
+        data=features2save,
+        columns=[
+            "ID_DMO",
+            "concentration_prada",
+            "concentration_nfw",
+            "rho_s",
+            "chisq_nfw",
+            "m200c",
+        ],
+    )
+    
     ## Save features to file
     output_dir = "/cosma7/data/dp004/dc-cues1/tng_dataframes/"
     #df.to_hdf(output_dir + "halo_particle_summary.hdf5", key="df", mode="w")
