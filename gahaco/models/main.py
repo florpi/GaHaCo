@@ -23,8 +23,6 @@ from gahaco.features.feature_utils import (
     load_positions,
 )
 from gahaco.visualization import visualize
-from gahaco.models.predict import prediction
-from gahaco.models.fit import fitting
 from gahaco.models import hod
 from gahaco.models.model import Model
 from gahaco.utils.optimize import merge_configs

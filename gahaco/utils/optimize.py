@@ -9,6 +9,18 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 import pandas as pd
 
 
+def merge_configs(config, opt, experiment):
+    """
+    Input:
+    ------
+    """
+    
+    for key in opt.status()['parameters']:
+        config['model']['parameters'][key] = experiment.get_parameter(key)
+    
+    return config
+
+
 def feature_optimization(train, test, arg, experiment=None):
     """
     Perform feature decompositions and importance measures to create a optimized

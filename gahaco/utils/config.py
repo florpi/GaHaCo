@@ -42,6 +42,8 @@ def load_config(config_file_path: str) -> dict:
     # -------------------------------------------------------------------------
 
     # Add the path to the experiments folder to the config dict
-    config["experiment_dir"] = os.path.dirname(config_file_path)
+    if purpose is not 'optimize_tree':
+        # Add the path to the experiments folder to the config dict
+        config["experiment_dir"] = os.path.dirname(config_file_path)
 
     return config
