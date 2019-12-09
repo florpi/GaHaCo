@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import pynbody
 
@@ -5,9 +6,9 @@ sys.path.insert(0, "/cosma/home/dp004/dc-cues1/arepo_hdf5_library")
 import read_hdf5
 
 
-def from_particle_data(pos, vel, halo_idx, quantity):
+def from_particle_data(pos, vel, Mpart, quantity, nbins):
     """
-    Get density profile of halo with id halo_idx
+    Get profile of halo
     Args:
         quantity: str
             One of [count, mass, temperature, velocity dispersion,
@@ -17,6 +18,7 @@ def from_particle_data(pos, vel, halo_idx, quantity):
     # create radii bins
     min_rad = 0.05
     max_rad = 1
+    nbins = 20
     bins = np.logspace(np.log10(min_rad), np.log10(max_rad), nbins + 1, base=10.0)
     bin_radii = 0.5 * (bins[1:] + bins[:-1])
 
@@ -26,16 +28,19 @@ def from_particle_data(pos, vel, halo_idx, quantity):
     # profile
     if quantity == 'density':
         # only for dm
-        number_particles = np.histogram(r_particle_halo, bins=bins)[0]
-        bin_masses = number_particles * self.Mpart
+        number_particles = np.histogram(pos, bins=bins)[0]
+        bin_masses = number_particles * Mpart
         
         bin_value = bin_masses / bin_volumes
     
     elif quantity == 'velocity anisotropy':
+        pass
     
     elif quantity == 'velocity dispersion':
+        pass
 
     elif quantity == 'pairwise radial velocity dispersion':
+        pass
         # TODO
         #from halotools.mock_observables import radial_pvd_vs_r
         #sigma_12 = radial_pvd_vs_r(
