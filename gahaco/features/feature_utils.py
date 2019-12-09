@@ -45,6 +45,7 @@ def get_data(arg_label:str,
 
     return df.drop(columns="labels"), df.labels
 
+
 def load_positions(test_idx = None,
         path_to_file:str="/cosma7/data/dp004/dc-cues1/tng_dataframes/",
         filename:str="merged_dataframe.h5", 
@@ -56,7 +57,6 @@ def load_positions(test_idx = None,
     hydro_pos = np.vstack([df.x_hydro, df.y_hydro, df.z_hydro]).T
     dmo_pos = np.vstack([df.x_dmo, df.y_dmo, df.z_dmo]).T
     return hydro_pos, dmo_pos
-
 
 
 def _find_transition_regions(df_features: pd.DataFrame, n_centrals):
@@ -85,6 +85,7 @@ def _find_transition_regions(df_features: pd.DataFrame, n_centrals):
     mass_end = ((mass_edges[1:] + mass_edges[:-1]) / 2.0)[nluminous > 0.99][0]
     return np.log10(mass_center), np.log10(mass_end)
 
+
 def balance_dataset(df_features, df_labels, sampler, split='mass'):
 
     if split == 'mass':
@@ -93,6 +94,7 @@ def balance_dataset(df_features, df_labels, sampler, split='mass'):
     else:
         df_features_resampled, df_labels_resampled=_balance(df_features, df_labels, sampler)
     return df_features_resampled, df_labels_resampled
+
 
 def _balance(df_features, df_labels, sampler):
     sampler_ = sampler(random_state=42) 

@@ -1,7 +1,9 @@
-<<<<<<< HEAD
 import sys
 import numpy as np
+import h5py
 import pandas as pd
+from astropy import units
+from astropy.constants import G
 from scipy.optimize import curve_fit, newton
 
 sys.path.insert(0, "/cosma/home/dp004/dc-cues1/arepo_hdf5_library")
@@ -53,31 +55,31 @@ class ParticleSnapshot:
             ]
         )
         # associate particles to subfind & fof objects
-		self.N_particles = self.snapshot.cat['GroupLenType'][:,1].astype(np.int64)
-		self.firstsub = (self.snapshot.cat['GroupFirstSub']).astype(np.int64)
-		self.cum_N_particles= np.cumsum(self.N_particles) - self.N_particles
-		self.ID_DMO = np.arange(0, len(self.N_particles))
-		# get only resolved halos
-		self.halo_mass_thresh = 1.0e11 
-		self.halo_mass_cut = (
-				self.snapshot.cat["Group_M_Crit200"][:]*self.snapshot.header.hubble>self.halo_mass_thresh
-		)
-		# filter subfind & fof objects
-		self.N_particles = self.N_particles[self.halo_mass_cut]
-		self.firstsub = self.firstsub[self.halo_mass_cut]
-		self.cum_N_particles = self.cum_N_particles[self.halo_mass_cut]
-		self.ID_DMO = self.ID_DMO[self.halo_mass_cut]
+        self.N_particles = self.snapshot.cat['GroupLenType'][:,1].astype(np.int64)
+        self.firstsub = (self.snapshot.cat['GroupFirstSub']).astype(np.int64)
+        self.cum_N_particles= np.cumsum(self.N_particles) - self.N_particles
+        self.ID_DMO = np.arange(0, len(self.N_particles))
+        # get only resolved halos
+        self.halo_mass_thresh = 1.0e11 
+        self.halo_mass_cut = (
+                self.snapshot.cat["Group_M_Crit200"][:]*self.snapshot.header.hubble>self.halo_mass_thresh
+        )
+        # filter subfind & fof objects
+        self.N_particles = self.N_particles[self.halo_mass_cut]
+        self.firstsub = self.firstsub[self.halo_mass_cut]
+        self.cum_N_particles = self.cum_N_particles[self.halo_mass_cut]
+        self.ID_DMO = self.ID_DMO[self.halo_mass_cut]
         self.halo_pos = self.snapshot.cat['GroupPos'][self.halo_mass_cut] 
         self.halo_vel = self.snapshot.cat['GroupVel'][self.halo_mass_cut] 
-		self.r200c = self.snapshot.cat['Group_R_Crit200'][self.halo_mass_cut]
-		self.m200c = self.snapshot.cat['Group_M_Crit200'][self.halo_mass_cut]
-		self.vmax = self.snapshot.cat['SubhaloVmax'][self.firstsub]
-		self.N_halos = len(self.vmax)
+        self.r200c = self.snapshot.cat['Group_R_Crit200'][self.halo_mass_cut]
+        self.m200c = self.snapshot.cat['Group_M_Crit200'][self.halo_mass_cut]
+        self.vmax = self.snapshot.cat['SubhaloVmax'][self.firstsub]
+        self.N_halos = len(self.vmax)
 
         # read particle data
         self.snapshot.read(["Coordinates", "Velocities"], parttype=[1])
-		self.coordinates = self.snapshot.data['Coordinates']['dm'][:]
-		self.velocities = self.snapshot.data['Velocities']['dm'][:]
+        self.coordinates = self.snapshot.data['Coordinates']['dm'][:]
+        self.velocities = self.snapshot.data['Velocities']['dm'][:]
 
 
     def concentration(self, method='prada'):
@@ -118,7 +120,7 @@ class ParticleSnapshot:
 
         return concentration
 
-    def profile(self, halo_idx, quantity, nbins=20):
+    def get_profile(self, halo_idx, quantity, nbins=20):
         """
 		Get density profile of halo with id halo_idx
 		Args:
@@ -153,8 +155,13 @@ class ParticleSnapshot:
                 np.linalg.norm((coordinates_in_halo - self.halo_pos[halo_idx]), axis=1)
                 / self.r200c[halo_idx]
             )
-        
-        prof.from_particle_data(rel_par_pos, rel_par_vel, quantity)
+            bin_radii, bin_densities = prof.from_particle_data(
+                rel_par_pos, rel_par_vel, 0, quantity, nbins,
+            )
+        else:
+            bin_radii, bin_densities = prof.from_particle_data(
+                rel_par_pos, 0, self.Mpart, quantity, nbins,
+            )
 
         return bin_radii, bin_densities
 
@@ -172,13 +179,18 @@ class ParticleSnapshot:
         self.concentration = np.zeros((self.N_halos))
         self.rho_s = np.zeros((self.N_halos))
         self.chisq = np.zeros((self.N_halos))
+        nbins = 20
+        self.profiles_value = np.zeros((self.N_halos, nbins))
+        self.profiles_radii = np.zeros((self.N_halos, nbins))
 
-        for halo in range(self.N_halos):
-            bin_radii, bin_densities = self.density_profile(halo)
+        for halo_idx in range(self.N_halos):
+            bin_radii, bin_densities = self.get_profile(halo_idx, 'density', nbins)
+            self.profiles_radii[halo_idx, :] = bin_radii
+            self.profiles_value[halo_idx, :] = bin_densities
             fit_densities = bin_densities[bin_densities > 0.0]
             fit_radii = bin_radii[bin_densities > 0.0]
 
-            if (len(fit_densities) > 2) & (self.N_particles[halo] >= 5000):
+            if (len(fit_densities) > 2) & (self.N_particles[halo_idx] >= 5000):
                 try:
                     popt, pcov = curve_fit(
                         nfw,
@@ -189,54 +201,27 @@ class ParticleSnapshot:
                 except:
                     popt = (-9999, -9999)
 
-                self.rho_s[halo] = popt[0]
-                self.concentration[halo] = popt[1]
+                self.rho_s[halo_idx] = popt[0]
+                self.concentration[halo_idx] = popt[1]
                 fit = nfw(fit_radii, *popt)
-                self.chisq[halo] = (
+                self.chisq[halo_idx] = (
                     1 / len(bin_radii) * np.sum((np.log10(fit_densities) - fit) ** 2)
                 )
 
             else:
-                self.rho_s[halo] = -9999
-                self.concentration[halo] = -9999
-                self.chisq[halo] = -9999
+                self.rho_s[halo_idx] = -9999
+                self.concentration[halo_idx] = -9999
+                self.chisq[halo_idx] = -9999
 
-
-    def principal_axis(self):
-        """
-		"""
-        import gahaco.features.utils import shape
-        
-        for halo in range(self.N_halos):
-            # Find all particles in this object
-            coordinates_halo = self.coordinates[
-            self.group_offset[halo] : self.group_offset[halo] + self.N_particles[halo], :
-            ]
-
-            # Particle positons relative to object centre
-            rel_part_pos = (coordinates_halo - self.halo_pos[halo]) / self.r200c[halo]
-
-            # radii in which to find principal axis
-            logr=np.linspace(np.log10(rmin),np.log10(rmax),nbins)
-            rin=10**(logr-binwidth/2.)
-            rout=10**(logr+binwidth/2.)
-
-            if useR200==True:
-                pos/=rvir
-            else:
-                rin=rin*300
-                rout=rout*300
-                rvir=1.
-
-            self.principal_axis = shape.principal_axis(
-                rel_part_pos, rvir, rin, rout, False, False, 1e-2
-            )
-
-    def velocity_anisotropy(self):
+                
+    def velocity_anisotropy(self, radius):
         """
         Get the velocity anisotropy parameter.
         (DOI: 10.1016/j.nuclphysbps.2009.07.010; arxiv: 0810.3676)
-		"""
+		    """
+        if radius is "2500":
+            self.vmax_r2500 = np.zeros(self.N_halos)
+            self.vrms_r2500 = np.zeros(self.N_halos)
         self.vel_ani_param = np.zeros(self.N_halos)
 
         for halo in range(self.N_halos):
@@ -252,14 +237,21 @@ class ParticleSnapshot:
             obj_part_pos = (obj_part_pos - self.halo_pos[halo]) / self.r200c[halo]
             obj_part_vel -= self.halo_vel[halo]
 
+            if radius is "2500":
+                pass
+
             # find angle between position & velocity vector
             phi = np.arccos(
                 np.dot(obj_part_vel, obj_part_pos) /
                 (np.linalg.norm(obj_part_vel) * np.linalg.norm(obj_part_pos))
             )
 
+            # store Vmax at this radii
+            self.vmax_r2500 = np.max(np.linalg.norm(v) * np.cos(phi))
+
             # radial velocity dispersion
             sigma_r = np.std(np.linalg.norm(v) * np.cos(phi))
+            self.vrms_r2500 = np.max(sigma_r)
 
             # trangential velocity dispersion
             sigma_t = np.std(np.linalg.norm(v) * np.sin(phi))
@@ -274,11 +266,14 @@ if __name__ == "__main__":
 
     # calculate properties
     snap.concentration('prada')
-    snap.principal_axis()
     snap.fit_nfw()
     snap.velocity_anisotropy()
+    snap.get_profile()
+    #snap.r2500_summary()
 
-    # store data in pandas dataframe
+    #
+    # Store scalar features in pandas dataframe
+    #
     features2save = np.vstack(
         [
             snap.ID_DMO,
@@ -289,7 +284,6 @@ if __name__ == "__main__":
             snap.m200c,
         ]
     ).T
-    print(features2save.shape)
     df = pd.DataFrame(
         data=features2save,
         columns=[
@@ -302,6 +296,16 @@ if __name__ == "__main__":
         ],
     )
     
-    # Save features to file
-    output_dir = "/cosma6/data/dp004/dc-cues1/tng_dataframes/"
-    df.to_hdf(output_dir + "halo_particle_summary.hdf5", key="df", mode="w")
+    ## Save features to file
+    output_dir = "/cosma7/data/dp004/dc-cues1/tng_dataframes/"
+    #df.to_hdf(output_dir + "halo_particle_summary.hdf5", key="df", mode="w")
+
+
+    #
+    # Store vector features in h5py
+    #
+    hf = h5py.File(output_dir + "halo_particle_profiles.hdf5", 'w')
+    hf.create_dataset('ID_DMO', data=snap.ID_DMO)
+    hf.create_dataset('radii', data=snap.profiles_radii)
+    hf.create_dataset('values', data=snap.profiles_value)
+    hf.close()

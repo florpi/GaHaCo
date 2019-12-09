@@ -1,7 +1,5 @@
 {
     "label": "dark_or_light",
-    "sampling": {"module": "imblearn.under_sampling",
-				"method": "RandomUnderSampler"},
     "model": {
         "name": "lightgbm",
         "module": "lightgbm",
@@ -9,12 +7,13 @@
             "application": "binary",
             "objective": "binary",
             "metric": "auc",
-            "is_unbalance": "false",
+            "is_unbalance": "true",
             "boosting": "gbdt",
             "num_leaves": 50,
+            "max_depth": 10,
+            "min_split_gain": 0.01,
             "feature_fraction": 1,
             "bagging_fraction": 1,
-            "bagging_freq": 0,
             "learning_rate": 0.05,
             "verbose": 0
         }
