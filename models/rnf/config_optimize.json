@@ -1,0 +1,13 @@
+{
+    "algorithm": "bayes", 
+    "parameters": {
+        "n_estimators": {"type": "integer", "min": 10, "max": 400},
+        "max_depth": {"type": "integer", "min": 10, "max": 100},
+        "min_samples_leaf": {"type": "integer", "min": 2, "max": 10},
+        "min_samples_split": {"type": "integer", "min": 2, "max": 10}
+    },
+    "spec": {
+        "metric": "f1",
+        "objective": "maximize"
+    }
+}
