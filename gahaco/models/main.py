@@ -193,7 +193,7 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             hod_tpcf.append(compute_tpcf(test_dmo_pos[n_hod_galaxies])[1])
             fold+=1
 
-    if (FLAGS.optimize_model is False) and (FLAGS.figures is True):
+    if (FLAGS.optimize_model is False) and (FLAGS.figures is True) and (config['label'] != 'nr_of_satellites'):
         # ---------------------------------------------------------------------
         # Save output's visualizations
         # ---------------------------------------------------------------------
