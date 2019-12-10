@@ -10,6 +10,9 @@ import pandas as pd
 import comet_ml
 from comet_ml import Experiment, OfflineExperiment, Optimizer
 
+from sklearn.model_selection import train_test_split
+import lightgbm
+
 #from gahaco.models.train import training
 from gahaco.utils.config import load_config
 from gahaco.utils.optimize import merge_configs
@@ -49,8 +52,8 @@ class Model():
             project_name="general",
             workspace="florpi",
             experiment_class="OfflineExperiment",
-            offline_directory="/cosma/home/dp004/dc-beck3/4_GaHaCo/GaHaCo/comet/",
-            #offline_directory="/cosma/home/dp004/dc-cues1/GaHaCo/comet/",
+            #offline_directory="/cosma/home/dp004/dc-beck3/4_GaHaCo/GaHaCo/comet/",
+            offline_directory="/cosma/home/dp004/dc-cues1/GaHaCo/comet/",
         )
 
 
@@ -77,7 +80,7 @@ class Model():
         """
         Train/fit the model using the training data.
         """
-        if self.kind == "lightgbm":
+        if self.kind == "lightgbm_":
 
             # Create the LightGBM training data containers
             # TODO: put parameters into config
@@ -86,7 +89,7 @@ class Model():
                 y_train,
                 test_size=0.2,
                 random_state=42,
-                stratify=y_train
+                #stratify=y_train
             )
             lgb_train = lightgbm.Dataset(x, label=y)
             lgb_eval = lightgbm.Dataset(x_eval, label=y_eval)
@@ -128,7 +131,7 @@ class Model():
         """
         Perform prediction after having trained/fitted the model.
         """
-        if self.kind == "lightgbm":
+        if self.kind == "lightgbm_":
             probabilities = model.predict(test_features, num_iteration=model.best_iteration)
             return  probabilities > 0.50
         elif self.kind == "catboost":

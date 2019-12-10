@@ -10,7 +10,10 @@ class HOD():
     def __init__(self, log_m200c, N_gals, satellites=False):
 
         self.m200c = 10**log_m200c
-        n_centrals = N_gals > 0 
+        if satellites:
+            n_centrals = N_gals > 0 
+        else:
+            n_centrals = N_gals
         nbins = 20
         mass_bins = np.logspace(np.log10(np.min(self.m200c)), np.log10(np.max(self.m200c)), 
                 nbins + 1)

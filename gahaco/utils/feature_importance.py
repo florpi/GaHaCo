@@ -4,7 +4,6 @@ import pandas as pd
 import numpy as np
 
 def test_set_metric(model, X_test, y_test, metric, metric_params):
-    # f1 socre?
     y_pred = model.predict(X_test)
     return metric(y_test, y_pred, **metric_params)
 
