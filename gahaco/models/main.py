@@ -14,6 +14,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.metrics import (
     f1_score,
+    r2_score,
     confusion_matrix,
 )
 
@@ -35,7 +36,7 @@ from gahaco.features.correlation import select_uncorrelated_features
 # -----------------------------------------------------------------------------
 # Flags 
 # -----------------------------------------------------------------------------
-flags.DEFINE_string('model', 'lightgbm', 'model to run') # name ,default, help
+flags.DEFINE_string('model', 'lightgbm_reg', 'model to run') # name ,default, help
 flags.DEFINE_integer('np', 2, 'Number of processes to run') 
 flags.DEFINE_integer('n_splits', 4, 'Number of folds for cross-validation') 
 flags.DEFINE_boolean('upload', True, 'upload model to comet.ml, otherwise save in temporary folder') 
@@ -115,7 +116,11 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         x_train, x_test = (features.iloc[train_idx], features.iloc[test_idx])
         y_train, y_test = (labels.iloc[train_idx], labels.iloc[test_idx])
 
-        halo_occ = hod.HOD(m200c[train_idx], y_train)
+        if (config['label']=='stellar_mass'):
+            n_gals = y_train > config['log_stellar_mass_threshold']
+            halo_occ = hod.HOD(m200c[train_idx], n_gals)
+        else:
+            halo_occ = hod.HOD(m200c[train_idx], y_train)
         halo_occ.m200c = m200c[test_idx] 
         n_hod_galaxies=halo_occ.populate_centrals()
         n_hod_galaxies = n_hod_galaxies > 0
@@ -145,26 +150,15 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         experiment.log_metric("Metric value", metric_value)
 
         if (config['label']=='stellar_mass') or (config['label']=='nr_of_satellites'):
+            threshold = (y_test > 0.) & (y_pred > 0.)
+            r2 = r2_score(y_test[threshold], y_pred[threshold])
             visualize.regression(
-                y_test, y_pred, metric_value, fold=fold, experiment=experiment
+                y_test[threshold], y_pred[threshold], r2, metric_value, fold=fold, experiment=experiment
             )
             visualize.histogram(
-                    y_test, y_pred, experiment
+                    y_test[threshold], y_pred[threshold], experiment
             )
-            if (config['label']=='stellar_mass'):
-                y_pred = y_pred > config['log_stellar_mass_threshold']
-                y_test = y_test > config['log_stellar_mass_threshold']
-
-        if (config['label'] != 'nr_of_satellites'):
-            cm = confusion_matrix(y_test, y_pred)
-            cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
-            cms.append(cm)
-
         if FLAGS.optimize_model is False:
-            cm = confusion_matrix(y_test, n_hod_galaxies)
-            cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
-            hod_cms.append(cm)
-
             if config['feature_optimization']['measure_importance']:
                 imp = feature_importance.dropcol(
                     trained_model,
@@ -188,6 +182,21 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 pm_importance.append(imp)
 
                 gini_importance.append(trained_model.feature_importances_)
+
+            if (config['label']=='stellar_mass'):
+                y_pred = y_pred > config['log_stellar_mass_threshold']
+                y_test = y_test > config['log_stellar_mass_threshold']
+
+            if (config['label'] != 'nr_of_satellites'):
+                cm = confusion_matrix(y_test, y_pred)
+                cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
+                cms.append(cm)
+
+
+            cm = confusion_matrix(y_test, n_hod_galaxies)
+            cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
+            hod_cms.append(cm)
+
 
             test_hydro_pos, test_dmo_pos= load_positions(test_idx)
             r_c, test_hydro_tpcf = compute_tpcf(test_hydro_pos[y_test>0])

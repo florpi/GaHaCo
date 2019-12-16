@@ -11,6 +11,7 @@ def permutation(model, X_test, y_test,
         baseline_metric,
         metric,
         metric_params,
+        inverse=True,
         ):
     imp = []
     for col in X_test.columns:
@@ -18,14 +19,19 @@ def permutation(model, X_test, y_test,
         X_test[col] = np.random.permutation(X_test[col])
         permuted_column = test_set_metric(model, X_test, y_test, metric, metric_params)
         X_test[col] = save
-        imp.append(baseline_metric - permuted_column)
-    return np.array(imp)
+        imp.append((baseline_metric - permuted_column)/baseline_metric)
+        
+    imp = np.array(imp)
+    if inverse:
+        imp *= -1
+    return imp
 
 def dropcol(model, X_train, y_train, 
             X_test, y_test, 
             baseline_metric,
             metric,
             metric_params,
+            inverse=True,
             ):
     imp = []
     for col in X_train.columns:
@@ -35,7 +41,9 @@ def dropcol(model, X_train, y_train,
         #model_.random_state = 999
         model_.fit(X, y_train)
         drop_column = test_set_metric(model_, X_, y_test, metric, metric_params)
-        imp.append(baseline_metric - drop_column)
+        imp.append((baseline_metric - drop_column)/baseline_metric)
     imp = np.array(imp)
+    if inverse:
+        imp *= -1
     return imp
     

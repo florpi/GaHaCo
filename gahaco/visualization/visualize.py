@@ -1,11 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
+import seaborn as sns
 from gahaco.utils.tpcf import compute_tpcf, compute_power_spectrum
 from sklearn import svm, datasets
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix
 from sklearn.utils.multiclass import unique_labels
+from sklearn.metrics import (r2_score, mean_squared_error, confusion_matrix)
 from scipy.stats import binned_statistic
 
 RENAME_DICT = {'M200c':r'$M_{200c}$', 'R200c':r'$R_{200c}$','VelDisp': r'$\sigma_v$',
@@ -58,7 +58,7 @@ def plot_confusion_matrix(
             ax.text(
                 j,
                 i,
-                f'${cm[i,j]:.2f} \pm {std_cm[i,j]:.2f}$',
+                f'${cm[i,j]:.2f} \pm {std_cm[i,j]:.2E}$',
                 #format(cm[i, j], fmt),
                 ha="center",
                 va="center",
@@ -135,7 +135,7 @@ def compute_plot_tpcf(pred_positions,
     axes[1].set_ylim(0.9,1.1)
 
     axes[1].set_xlabel(r'$r$ [Mpc/h]')
-    axes[1]. set_ylabel(r"$\hat{\xi}/\xi_{sim}$")
+    axes[1].set_ylabel(r'$\Delta{\xi}/\sigma_{\xi}$')
     axes[0].legend()
 
     if experiment is not None:
@@ -158,24 +158,38 @@ def plot_tpcfs(r_c,
     fig, axes = plt.subplots(nrows = 2, ncols = 1, sharex = True,
                           gridspec_kw = {'height_ratios':[4,1]})
 
+    hydro_mean_folds = np.mean(hydro_tpcfs, axis=0)
+    hydro_std_folds = np.std(hydro_tpcfs, axis=0)
 
-    fold_linestyle=['-', 'dotted', 'dashed', '-.']
-    for fold in range(len(hydro_tpcfs)):
-        axes[0].plot(r_c, r_c**2*hydro_tpcfs[fold], label = f'Hydro-Fold{fold}', color = 'black',
-                linestyle=fold_linestyle[fold])
-        axes[0].plot(r_c, r_c**2*pred_tpcfs[fold], label = f'RF-Fold{fold}', color = 'midnightblue',
-                linestyle=fold_linestyle[fold])
-        axes[0].plot(r_c, r_c**2*hod_tpcfs[fold], label = f'HOD-Fold{fold}', color = 'indianred',
-                linestyle=fold_linestyle[fold])
-        axes[0].set_ylabel(r'$r^2{\xi}(r)$')
-        axes[1].plot(r_c, pred_tpcfs[fold]/hydro_tpcfs[fold], color = 'midnightblue',
-                linestyle=fold_linestyle[fold])
-        axes[1].plot(r_c, hod_tpcfs[fold]/hydro_tpcfs[fold], color = 'indianred',
-                linestyle=fold_linestyle[fold])
+    pred_mean_folds = np.mean(pred_tpcfs, axis=0)
+    pred_std_folds = np.std(pred_tpcfs, axis=0)
 
+    hod_mean_folds = np.mean(hod_tpcfs, axis=0)
+    hod_std_folds = np.std(hod_tpcfs, axis=0)
+
+    axes[0].errorbar(r_c, r_c**2*hydro_mean_folds, yerr = r_c**2*hydro_std_folds,
+            label = f'TNG', color = 'black')
+    axes[0].errorbar(r_c, r_c**2*pred_mean_folds, yerr = r_c**2*pred_std_folds,
+            label = f'ML', color = 'midnightblue')
+    axes[0].errorbar(r_c, r_c**2*hod_mean_folds, label = f'HOD', color = 'indianred',
+            yerr = r_c**2*hod_std_folds)
+    axes[0].set_ylabel(r'$r^2{\xi}(r)$')
+    axes[1].plot(r_c, (pred_mean_folds- hydro_mean_folds)/hydro_std_folds, color = 'midnightblue')
+    axes[1].fill_between(r_c, (pred_mean_folds-pred_std_folds- hydro_mean_folds)/hydro_std_folds,
+                    (pred_mean_folds+pred_std_folds- hydro_mean_folds)/hydro_std_folds,
+                    color = 'midnightblue', alpha = 0.3)
+    axes[1].plot(r_c, (hod_mean_folds- hydro_mean_folds)/hydro_std_folds, color = 'indianred')
+    axes[1].fill_between(r_c, (hod_mean_folds-hod_std_folds- hydro_mean_folds)/hydro_std_folds,
+                    (hod_mean_folds+hod_std_folds- hydro_mean_folds)/hydro_std_folds,
+                    color = 'indianred', alpha = 0.3)
+ 
+    #axes[1].plot(r_c, hod_tpcfs[fold]/hydro_tpcfs[fold], color = 'indianred',
+    #        linestyle=fold_linestyle[fold])
+
+    axes[1].axhline(y = 0., color='gray', linestyle='dashed')
+    axes[1].axhline(y = -1., color='gray', linestyle='dashed')
     axes[1].axhline(y = 1., color='gray', linestyle='dashed')
-    axes[1].fill_between(x = r_c, y1 = 0.99, y2 = 1.01, color = 'yellow')
-    axes[1].set_ylim(0.9,1.1)
+    axes[1].set_ylim(-5,5)
 
     axes[1].set_xlabel(r'$r$ [Mpc/h]')
     axes[1]. set_ylabel(r"$\hat{\xi}/\xi_{sim}$")
@@ -307,20 +321,30 @@ def plot_halo_occupation(halo_mass, n_gals_label,
     else:
         return fig
 
+def regression_metrics(y_label, y_pred):
 
-def regression(y_label, y_pred, r2score, fold=0, experiment=None):
+    return (mean_squared_error(y_label, y_pred), r2_score(y_label,y_pred))
 
-    fig = plt.figure()
-    plt.plot(y_label, y_label, linestyle='dashed')
-    plt.plot(y_label, y_pred, linestyle='', marker='o', markersize=2)
-    plt.text(0.5,0.5,f'$R^2$ = {r2score:.4f}')
-    plt.xlabel('Target')
-    plt.ylabel('Prediction')
+def regression(y_label, y_pred, r2score, mse, fold=0, experiment=None):
 
+    h = sns.jointplot(x=y_label, y=y_pred, kind='hex')
+    h.set_axis_labels('$log(M_{*, target}) \,\, [M_\odot]$',
+                '$log(M_{*, pred}) \,\, [M_\odot]$', fontsize=16)
+    h.ax_joint.text(8, 12, f"$R^2 = {r2score:.2f}$ ", fontsize = 13)
+    h.ax_joint.text(8, 11.5, f"MSE$ = {mse:.3f}$ ", fontsize = 13)
+
+
+    x0, x1 = h.ax_joint.get_xlim()
+    y0, y1 = h.ax_joint.get_ylim()
+    lims = [max(x0, y0), min(x1, y1)]
+    h.ax_joint.plot(lims, lims, ':k') 
+    #h = h.annotate(regression_metrics,  template="{stat[0]}: {val[0]:.2f}' {stat[1]}: {val[1]:.2f}",
+    #        stat = ("MSE", '$R^2$'), loc = "upper left", fontsize=12)
+    h.fig.tight_layout()
     if experiment is not None:
-        experiment.log_figure(figure_name="Regression", figure=fig)
+        experiment.log_figure(figure_name="Regression", figure=h.fig)
     else:
-        return fig
+        return h 
 
 
 def histogram(y_test, y_pred, experiment=None):
