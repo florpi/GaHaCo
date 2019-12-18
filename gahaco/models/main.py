@@ -23,26 +23,24 @@ from gahaco.features.feature_utils import (
     load_positions,
 )
 from gahaco.visualization import visualize
-from gahaco.models.predict import prediction
-from gahaco.models.fit import fitting
 from gahaco.models import hod
 from gahaco.models.model import Model
 from gahaco.utils.optimize import merge_configs
 from gahaco.utils import feature_importance
 from gahaco.utils.optimize import feature_optimization
 from gahaco.utils.config import load_config
-#from gahaco.utils.tpcf import compute_tpcf
+from gahaco.utils.tpcf import compute_tpcf
 from gahaco.features.correlation import select_uncorrelated_features
 
 # -----------------------------------------------------------------------------
 # Flags 
 # -----------------------------------------------------------------------------
-flags.DEFINE_string('model', 'rnf', 'model to run') # name ,default, help
-flags.DEFINE_integer('np', 10, 'Number of processes to run') 
-flags.DEFINE_integer('n_splits', 1, 'Number of folds for cross-validation') 
-flags.DEFINE_boolean('upload', True, 'upload model to comet.ml, otherwise save in temporary folder') 
+flags.DEFINE_string('model', 'catboost', 'model to run') # name ,default, help
+flags.DEFINE_integer('np', 1, 'Number of processes to run') 
+flags.DEFINE_integer('n_splits', 2, 'Number of folds for cross-validation') 
+flags.DEFINE_boolean('upload', False, 'upload model to comet.ml, otherwise save in temporary folder') 
 flags.DEFINE_boolean('optimize_model', True, 'use comet.ml to perform hyper-param. optimization.') 
-flags.DEFINE_boolean('logging', False, 'save log files') 
+flags.DEFINE_boolean('logging', True, 'save log files') 
 flags.DEFINE_boolean('mass_balance', False, 'balance dataset in different mass bins') 
 flags.DEFINE_boolean('figures', False, 'if final figures should be created') 
 FLAGS = flags.FLAGS
@@ -53,7 +51,7 @@ def main(argv):
     opt_config_file_path = "../../models/%s/config_optimize.json" % (FLAGS.model)
     main_config_file_path = "../../models/%s/config_%s.json" % (FLAGS.model, FLAGS.model)
     config = load_config(config_file_path=main_config_file_path, purpose="")
-    config['model']['parameters']['n_jobs'] = FLAGS.np
+    #config['model']['parameters']['n_jobs'] = FLAGS.np
     print(f"Using {FLAGS.np} cores to fit models")
 
     # Initiate Model/Experiment
@@ -71,6 +69,8 @@ def main(argv):
     if "sampling" in config:
         sampler_module = importlib.import_module(config["sampling"]["module"])
         sampler = getattr(sampler_module, config["sampling"]["method"])
+    else:
+        sampler = None
 
     # K-fold validation setting
     if config['label']=='stellar_mass':
@@ -81,7 +81,8 @@ def main(argv):
     if FLAGS.optimize_model:
         # model-/hyper-parameter optimization (run many experiments)
         for experiment in model.opt.get_experiments():
-            experiment.add_tag('hyper-parameter optimization 1')
+            print('hyper-parameter optimization %s' % FLAGS.model)
+            experiment.add_tag('hyper-parameter optimization %s' % FLAGS.model)
             config = merge_configs(config, model.opt, experiment)
             train(
                 model, experiment, features, labels, m200c, metric, sampler, skf, config, FLAGS)
@@ -142,7 +143,7 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
 
 
         metric_value = metric(y_test, y_pred, **config["metric"]["params"])
-        experiment.log_metric("Metric value", metric_value)
+        experiment.log_metric("f1", metric_value)
 
         if config['label']=='stellar_mass':
             visualize.regression(
@@ -152,10 +153,6 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             y_test = y_test > config['log_stellar_mass_threshold']
         cm = confusion_matrix(y_test, y_pred)
         cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
-        
-        
-        experiment.log_image(cm, name="Confusion Matrix")
-        cms.append(cm)
 
         if FLAGS.optimize_model is False:
             cm = confusion_matrix(y_test, n_hod_galaxies)
@@ -193,7 +190,7 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             hod_tpcf.append(compute_tpcf(test_dmo_pos[n_hod_galaxies])[1])
             fold+=1
 
-    if (FLAGS.optimize_model is False) and (FLAGS.figures is True):
+    if FLAGS.figures is True:
         # ---------------------------------------------------------------------
         # Save output's visualizations
         # ---------------------------------------------------------------------
@@ -204,45 +201,47 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             title='Tree',
             experiment = experiment,
         )
-        visualize.plot_confusion_matrix(
-            hod_cms,
-            classes = ['Dark', 'Luminous'],
-            normalize = False,
-            title='HOD',
-            experiment = experiment,
-        )
-        visualize.plot_tpcfs(
-            r_c, hydro_tpcf, pred_tpcf, hod_tpcf, experiment=experiment
-        )
 
-        if config['feature_optimization']['measure_importance']:
-            visualize.plot_feature_importance(
-                dropcol_importance,
-                x_train.columns,
-                title='Drop column',
-                experiment=experiment
+        if FLAGS.optimize_model is False:
+            visualize.plot_confusion_matrix(
+                hod_cms,
+                classes = ['Dark', 'Luminous'],
+                normalize = False,
+                title='HOD',
+                experiment = experiment,
             )
-            visualize.plot_feature_importance(
-                pm_importance,
-                x_train.columns,
-                title='Permute column',
-                experiment=experiment
-            )
-            visualize.plot_feature_importance(
-                gini_importance,
-                x_train.columns,
-                title='Gini impurity',
-                experiment=experiment,
+            visualize.plot_tpcfs(
+                r_c, hydro_tpcf, pred_tpcf, hod_tpcf, experiment=experiment
             )
 
-            if not config['feature_optimization']['uncorrelated']:
-                np.savetxt(
-                    f'../../models/{FLAGS.model}/gini_importances.csv',
-                    np.mean(gini_importance, axis=0)
+            if config['feature_optimization']['measure_importance']:
+                visualize.plot_feature_importance(
+                    dropcol_importance,
+                    x_train.columns,
+                    title='Drop column',
+                    experiment=experiment
                 )
-        sampling_method = config['sampling']['method']
-        experiment.add_tag(f'sampling = {sampling_method}')
-        experiment.add_tag(f'classifier = {FLAGS.model}')
+                visualize.plot_feature_importance(
+                    pm_importance,
+                    x_train.columns,
+                    title='Permute column',
+                    experiment=experiment
+                )
+                visualize.plot_feature_importance(
+                    gini_importance,
+                    x_train.columns,
+                    title='Gini impurity',
+                    experiment=experiment,
+                )
+
+                if not config['feature_optimization']['uncorrelated']:
+                    np.savetxt(
+                        f'../../models/{FLAGS.model}/gini_importances.csv',
+                        np.mean(gini_importance, axis=0)
+                    )
+            sampling_method = config['sampling']['method']
+            experiment.add_tag(f'sampling = {sampling_method}')
+            experiment.add_tag(f'classifier = {FLAGS.model}')
 
     print('All good :)')
 

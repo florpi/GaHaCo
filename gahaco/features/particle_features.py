@@ -1,4 +1,4 @@
-import sys
+import os, sys
 import numpy as np
 import h5py
 import pandas as pd
@@ -30,11 +30,23 @@ class ParticleSnapshot:
 	Class to operate on TNG's particle data
 	"""
 
-    def __init__(self, h5_dir="/cosma7/data/TNG/TNG300-1-Dark/", snapshot_number=99):
+    def __init__(
+        self,
+        overdensity_radius=2500,
+        h5_dir="/cosma7/data/TNG/TNG300-1-Dark/",
+        snapshot_number=99
+        ):
         """
         Load data of particles that belong to resolved halos
+        Args:
+            overdensity_radius: int
+                Out to which radius halo properties are measured.
+                R200 - default SubFind radii
+                R2500 - where galaxy formation takes place
+            h5_dir: str
+                path to particle data
+            snapshot_number: int
         """
-
         self.snapshot = read_hdf5.snapshot(
             snapshot_number, h5_dir, check_total_particle_number=True
         )
@@ -80,6 +92,51 @@ class ParticleSnapshot:
         self.snapshot.read(["Coordinates", "Velocities"], parttype=[1])
         self.coordinates = self.snapshot.data['Coordinates']['dm'][:]
         self.velocities = self.snapshot.data['Velocities']['dm'][:]
+        
+        # dm particle mass
+        self.Mpart = (
+            self.snapshot.header.massarr[1] * 1e10 / self.h
+        )  #[Msun] particle mass
+       
+        # if halo properties aren't to be found at r200c
+        self.overdensity = overdensity
+        if self.overdensity == 2500:
+            self.find_overdensity_radius()
+       
+
+    def find_overdensity_radius(self):
+        """
+        """
+        nfw_file_path = "/cosma7/data/dp004/dc-cues1/tng_dataframes/halo_nfw_profiles.hdf5"
+        
+        if not os.path.isfile(nfw_file_path):
+            raise ImportError("File with NFW-profiles can't be opened")
+
+        with h5py.File(nfw_file_path, 'r') as hf:
+            nfw = {}
+            for k in hf.keys():
+                nfw[k] = hf.get(k).value
+
+
+        self.overdensity_radius = np.ones((self.N_halos)) * -9999
+        for halo_idx in range(self.N_halos):
+            nfw_values = nfw['values'][halo_idx, ::-1]
+            nfw_radii = nfw['radii'][halo_idx, ::-1]
+
+            # only procede if NFW-profile was found
+            if (-9999 in np.unique(nfw_values)) and (len(np.unique(nfw_values)) == 1):
+                continue
+
+            r200c_physical = s.cat["Group_R_Crit200"][halo_idx]*1e-3  #[Mpc]
+            nfw_density = 10**nfw_values/r200c_physical**3  #[Msun/Mpc^3]
+            delta_rho = nfw_density/rho_crit
+
+            spl = BSpline(
+                delta_rho,
+                r200c_physical*nfw_radii,
+                k=5
+            )
+            self.overdensity_radius[halo_idx] = spl(2500)  #[Mpc]
 
 
     def concentration(self, method='prada'):
@@ -92,6 +149,11 @@ class ParticleSnapshot:
 				Halo concentration
 
 		"""
+        if self.overdensity_radius is  2500:
+            raise Exception(
+                "The Prada concentration can currently only be found for R200"
+            )
+
         scale_factor = 1.0 / (1.0 + self.snapshot.header.redshift)
         r200c_physical = self.r200c * scale_factor / 1000.0  # units Mpc
 
@@ -120,7 +182,28 @@ class ParticleSnapshot:
 
         return concentration
 
-    def get_profile(self, halo_idx, quantity, nbins=20):
+
+    def get_all_profiles(self, nbins=20):
+        """
+		Get density profiles of all halos
+
+		Returns:
+			bin_radii; radial bin centers.
+			bin_densities: density in randial bins
+		"""
+        import gahaco.features.utils.profile as prof
+        
+        nbins = 20
+        self.profiles_value = np.zeros((self.N_halos, nbins))
+        self.profiles_radii = np.zeros((self.N_halos, nbins))
+
+        for halo_idx in range(self.N_halos):
+            bin_radii, bin_densities = self.get_one_profile(halo_idx, 'density', nbins)
+            self.profiles_radii[halo_idx, :] = bin_radii
+            self.profiles_value[halo_idx, :] = bin_densities
+
+
+    def get_one_profile(self, halo_idx, quantity, nbins=20):
         """
 		Get density profile of halo with id halo_idx
 		Args:
@@ -165,28 +248,34 @@ class ParticleSnapshot:
 
         return bin_radii, bin_densities
 
+
     def fit_nfw(self):
         """
 		Fit NFW profile to mesured density profiles in the simulation.
 		Procedure defined in Prada et al. (2012)
         (DOI: 10.1111/j.1365-2966.2012.21007.x ; arxiv: 1104.5130)
 		"""
+        if self.overdensity_radius is  2500:
+            raise Exception(
+                "The NFW should only be measured out to R200" 
+            )
+        
         self.Mpart = (
             self.snapshot.header.massarr[1] * 1e10 / self.h
-        )  # particle mass, Msun
-        rho_crit = self.snapshot.const.rho_crit  # Msun Mpc^-3
+        )  #[Msun] particle mass
+        rho_crit = self.snapshot.const.rho_crit  #[Msun/Mpc^3]
 
         self.concentration = np.zeros((self.N_halos))
         self.rho_s = np.zeros((self.N_halos))
         self.chisq = np.zeros((self.N_halos))
         nbins = 20
-        self.profiles_value = np.zeros((self.N_halos, nbins))
-        self.profiles_radii = np.zeros((self.N_halos, nbins))
+        self.nfw_profiles_value = np.zeros((self.N_halos, nbins))
+        self.nfw_profiles_radii = np.zeros((self.N_halos, nbins))
 
         for halo_idx in range(self.N_halos):
-            bin_radii, bin_densities = self.get_profile(halo_idx, 'density', nbins)
-            self.profiles_radii[halo_idx, :] = bin_radii
-            self.profiles_value[halo_idx, :] = bin_densities
+            bin_radii, bin_densities = self.get_one_profile(halo_idx, 'density', nbins)
+
+            # use only radii-bins to fit nfw, where a measurement exists
             fit_densities = bin_densities[bin_densities > 0.0]
             fit_radii = bin_radii[bin_densities > 0.0]
 
@@ -203,7 +292,11 @@ class ParticleSnapshot:
 
                 self.rho_s[halo_idx] = popt[0]
                 self.concentration[halo_idx] = popt[1]
-                fit = nfw(fit_radii, *popt)
+
+                # use all radii-bins to create nfw-profile
+                fit = nfw(bin_radii, *popt)
+                self.nfw_profiles_radii[halo_idx, :] = bin_radii
+                self.nfw_profiles_value[halo_idx, :] = fit
                 self.chisq[halo_idx] = (
                     1 / len(bin_radii) * np.sum((np.log10(fit_densities) - fit) ** 2)
                 )
@@ -212,6 +305,8 @@ class ParticleSnapshot:
                 self.rho_s[halo_idx] = -9999
                 self.concentration[halo_idx] = -9999
                 self.chisq[halo_idx] = -9999
+                self.nfw_profiles_radii[halo_idx, :] = -9999
+                self.nfw_profiles_value[halo_idx, :] = -9999
 
             
     def velocity_anisotropy(self, radius):
@@ -219,12 +314,65 @@ class ParticleSnapshot:
         Get the velocity anisotropy parameter.
         (DOI: 10.1016/j.nuclphysbps.2009.07.010; arxiv: 0810.3676)
 		"""
-        if radius is "2500":
-            self.vmax_r2500 = np.zeros(self.N_halos)
-            self.vrms_r2500 = np.zeros(self.N_halos)
         self.vel_ani_param = np.zeros(self.N_halos)
 
         for halo in range(self.N_halos):
+
+            if self.N_particles[halo] >= 1000:
+                # Find all particles in this object
+                obj_part_pos = self.coordinates[
+                    self.group_offset[halo] : self.group_offset[halo] + self.N_particles[halo], :
+                ]
+                obj_part_vel = self.velocities[
+                    self.group_offset[halo] : self.group_offset[halo] + self.N_particles[halo], :
+                ]
+
+                # Particle properties w.r.t objects
+                obj_part_pos = (obj_part_pos - self.halo_pos[halo]) / self.r200c[halo]
+                obj_part_vel -= self.halo_vel[halo]
+            
+                if hasattr(self, 'overdensity_radius'):
+                    # select within overdensity_radius
+                    obj_part_dist = np.sqrt(
+                        obj_part_pos[:, 0]**2 + \
+                        obj_part_pos[:, 1]**2 + \
+                        obj_part_pos[:, 2]**2
+                    )
+                    indx = obj_part_dist < self.overdensity_radius[halo]
+                    obj_part_pos = obj_part_pos[indx]
+                    obj_part_vel = obj_part_vel[indx]
+            
+                    if np.max(obj_part_dist.shape) < 100:
+                        # if resolution too low, skip
+                        continue
+
+                vel_norm = np.linalg.norm(obj_part_vel, axis=1)
+                pos_norm = np.linalg.norm(obj_part_pos, axis=1)
+
+                # vector norms, thus only positive
+                vr = np.abs((obj_part_pos * obj_part_vel).sum(axis=1) / pos_norm)
+                vt = np.sqrt(vel_norm**2 - vr**2)
+
+                sigma_r = np.std(vr)
+                sigma_t = np.std(vt)
+
+                self.vel_ani_param[halo] = 1 - 0.5*(sigma_t**2 / sigma_r**2)
+
+            else:
+                self.vel_ani_param[halo] = -9999
+    
+    
+    def deltarho_summary_stats(self, radius):
+        """
+        Get the velocity anisotropy parameter.
+        (DOI: 10.1016/j.nuclphysbps.2009.07.010; arxiv: 0810.3676)
+		"""
+        self.vmax = np.zeros(self.N_halos)
+        self.mass = np.zeros(self.N_halos)
+        self.vrms = np.zeros(self.N_halos)
+
+        for halo in range(self.N_halos):
+
             # Find all particles in this object
             obj_part_pos = self.coordinates[
                 self.group_offset[halo] : self.group_offset[halo] + self.N_particles[halo], :
@@ -236,65 +384,67 @@ class ParticleSnapshot:
             # Particle properties w.r.t objects
             obj_part_pos = (obj_part_pos - self.halo_pos[halo]) / self.r200c[halo]
             obj_part_vel -= self.halo_vel[halo]
+        
+            if hasattr(self, 'overdensity_radius'):
+                # select within overdensity_radius
+                obj_part_dist = np.sqrt(
+                    obj_part_pos[:, 0]**2 + \
+                    obj_part_pos[:, 1]**2 + \
+                    obj_part_pos[:, 2]**2
+                )
+                indx = obj_part_dist < self.overdensity_radius[halo]
+                obj_part_pos = obj_part_pos[indx]
+                obj_part_vel = obj_part_vel[indx]
+        
+                if len(obj_part_pos) < 100:
+                    # if resolution too low, skip
+                    self.vmax[halo] = -9999
+                    self.vrms[halo] = -9999
+                    self.mass[halo] = -9999
+                    continue
 
-            if radius is "2500":
-                pass
+            vel_norm = np.linalg.norm(obj_part_vel, axis=1)
 
-            # find angle between position & velocity vector
-            phi = np.arccos(
-                np.dot(obj_part_vel, obj_part_pos) /
-                (np.linalg.norm(obj_part_vel) * np.linalg.norm(obj_part_pos))
-            )
-
-            # store Vmax at this radii
-            self.vmax_r2500 = np.max(np.linalg.norm(v) * np.cos(phi))
-
-            # radial velocity dispersion
-            sigma_r = np.std(np.linalg.norm(v) * np.cos(phi))
-            self.vrms_r2500 = np.max(sigma_r)
-
-            # trangential velocity dispersion
-            sigma_t = np.std(np.linalg.norm(v) * np.sin(phi))
-
-            # the velocity anisotropy parameter
-            self.vel_ani_param[halo] = 1 - 0.5*(sigma_t**2/sigma_r**2)
+            self.vmax[halo] = _get_vmax(obj_part_pos)
+            self.vrms[halo] = np.std(vel_norm)/np.sqrt(3)  # TODO double check
+            self.mass[halo] = len(obj_part_vel) * self.Mpart
 
 
 if __name__ == "__main__":
 
-    snap = ParticleSnapshot()
+    snap = ParticleSnapshot(overdensity_radius=2500)
 
     # calculate properties
-    snap.concentration('prada')
+    #snap.concentration('prada')
     snap.fit_nfw()
-    snap.velocity_anisotropy()
-    snap.get_profile()
+    #snap.velocity_anisotropy()
+    #snap.get_profile()
     #snap.r2500_summary()
 
     #
     # Store scalar features in pandas dataframe
     #
-    features2save = np.vstack(
-        [
-            snap.ID_DMO,
-            prada_concentration,
-            snap.concentration,
-            snap.rho_s,
-            snap.chisq,
-            snap.m200c,
-        ]
-    ).T
-    df = pd.DataFrame(
-        data=features2save,
-        columns=[
-            "ID_DMO",
-            "concentration_prada",
-            "concentration_nfw",
-            "rho_s",
-            "chisq_nfw",
-            "m200c",
-        ],
-    )
+    #features2save = np.vstack(
+    #    [
+    #        snap.ID_DMO,
+    #        prada_concentration,
+    #        snap.concentration,
+    #        snap.rho_s,
+    #        snap.chisq,
+    #        snap.m200c,
+    #    ]
+    #).T
+    #df = pd.DataFrame(
+    #    data=features2save,
+    #    columns=[
+    #        "ID_DMO",
+    #        "concentration_prada",
+    #        "concentration_nfw",
+    #        "rho_s",
+    #        "chisq_nfw",
+    #        "m200c",
+    #    ],
+    #)
     
     ## Save features to file
     output_dir = "/cosma7/data/dp004/dc-cues1/tng_dataframes/"
@@ -304,8 +454,8 @@ if __name__ == "__main__":
     #
     # Store vector features in h5py
     #
-    hf = h5py.File(output_dir + "halo_particle_profiles.hdf5", 'w')
+    hf = h5py.File(output_dir + "halo_nfw_profiles.hdf5", 'w')
     hf.create_dataset('ID_DMO', data=snap.ID_DMO)
-    hf.create_dataset('radii', data=snap.profiles_radii)
-    hf.create_dataset('values', data=snap.profiles_value)
+    hf.create_dataset('radii', data=snap.nfw_profiles_radii)
+    hf.create_dataset('values', data=snap.nfw_profiles_value)
     hf.close()

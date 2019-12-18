@@ -10,6 +10,15 @@ import pandas as pd
 import comet_ml
 from comet_ml import Experiment, OfflineExperiment, Optimizer
 
+from sklearn.model_selection import train_test_split
+
+import lightgbm
+#from lightgbm import LGBMClassifier, LGBMRegressor
+
+import catboost
+from catboost import CatBoostClassifier, CatBoostRegressor
+
+
 #from gahaco.models.train import training
 from gahaco.utils.config import load_config
 from gahaco.utils.optimize import merge_configs
@@ -39,19 +48,28 @@ class Model():
         """
         self.opt_config_file_path = opt_config_file_path
 
-        print("# load model-optimization config")
         config = load_config(
             config_file_path=self.opt_config_file_path, purpose="optimize_tree"
         )
-        self.opt = Optimizer(
-            config,
-            api_key="VNQSdbR1pw33EkuHbUsGUSZWr",
-            project_name="general",
-            workspace="florpi",
-            experiment_class="OfflineExperiment",
-            offline_directory="/cosma/home/dp004/dc-beck3/4_GaHaCo/GaHaCo/comet/",
-            #offline_directory="/cosma/home/dp004/dc-cues1/GaHaCo/comet/",
-        )
+        
+        if self.FLAGS.upload is False:
+            self.opt = Optimizer(
+                config,
+                api_key="VNQSdbR1pw33EkuHbUsGUSZWr",
+                project_name="general",
+                workspace="florpi",
+                experiment_class="OfflineExperiment",
+                offline_directory="/cosma/home/dp004/dc-beck3/4_GaHaCo/GaHaCo/comet/",
+                #offline_directory="/cosma/home/dp004/dc-cues1/GaHaCo/comet/",
+            )
+        else:
+            self.opt = Optimizer(
+                config,
+                api_key="VNQSdbR1pw33EkuHbUsGUSZWr",
+                project_name="general",
+                workspace="florpi",
+                experiment_class="Experiment",
+            )
 
 
     def init_comet_experiment(self):
@@ -77,10 +95,17 @@ class Model():
         """
         Train/fit the model using the training data.
         """
+        print("---------------------->>>>>", x_train.columns)
+
+        # find categorical features
+        print(type(x_train["N_subhalos"][0]))
+
+
         if self.kind == "lightgbm":
 
             # Create the LightGBM training data containers
-            # TODO: put parameters into config
+            # Note: LightGBM does not require pre-processing to balance dataset.
+            #       It can achieve that by itself if parameter is set in config.
             x, x_eval, y, y_eval = train_test_split(
                 x_train,
                 y_train,
@@ -88,11 +113,18 @@ class Model():
                 random_state=42,
                 stratify=y_train
             )
-            lgb_train = lightgbm.Dataset(x, label=y)
-            lgb_eval = lightgbm.Dataset(x_eval, label=y_eval)
+            lgb_train = lightgbm.Dataset(
+                x,
+                label=y,
+                categorical_feature=["Nsubhalos", "Nmergers"],
+            )
+            lgb_eval = lightgbm.Dataset(
+                x_eval,
+                label=y_eval,
+                categorical_feature=["Nsubhalos", "Nmergers"],
+            )
 
             # Initiate RNF-horizontal-tree and create forest
-            # TODO: put parameters into config
             model = lightgbm.train(
                 arg_model["parameters"],
                 lgb_train,
@@ -104,12 +136,27 @@ class Model():
             return model
 
         elif self.kind == "catboost":
-            catboost.fit(
-                X_train,
+            print("  ---------------- ")
+            print(arg_model["parameters"])
+            print("  ---------------- ")
+
+            x, x_eval, y, y_eval = train_test_split(
+                x_train,
                 y_train,
-                cat_features=categorical_columns_indices,
-                **arg_model["parameters"],
+                test_size=0.2,
+                random_state=42,
+                stratify=y_train
             )
+            
+            model = CatBoostClassifier(**arg_model["parameters"])
+            model.fit(
+                x,
+                y,
+                cat_features=["Nsubhalos", "Nmergers"],
+                eval_set=(x_eval,y_eval),
+            )
+
+            return model
 
         else:
 
@@ -131,9 +178,11 @@ class Model():
         if self.kind == "lightgbm":
             probabilities = model.predict(test_features, num_iteration=model.best_iteration)
             return  probabilities > 0.50
+
         elif self.kind == "catboost":
-            #TODO
-            pass
+            probabilities = model.predict(test_features)
+            return probabilities
+
         else:
             return model.predict(test_features)
 

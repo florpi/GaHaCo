@@ -22,14 +22,14 @@ def from_particle_data(pos, vel, Mpart, quantity, nbins):
     bins = np.logspace(np.log10(min_rad), np.log10(max_rad), nbins + 1, base=10.0)
     bin_radii = 0.5 * (bins[1:] + bins[:-1])
 
-    # volumne enclosed by each radii bin
+    # volumne enclosed by each radii bin, normalized by r200
     bin_volumes = 4.0 / 3.0 * np.pi * (bins[1:] ** 3 - bins[:-1] ** 3)
 
     # profile
     if quantity == 'density':
         # only for dm
         number_particles = np.histogram(pos, bins=bins)[0]
-        bin_masses = number_particles * Mpart
+        bin_masses = number_particles * Mpart  #[Msun]
         
         bin_value = bin_masses / bin_volumes
     
