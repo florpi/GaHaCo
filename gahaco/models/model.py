@@ -18,7 +18,6 @@ import lightgbm
 import catboost
 from catboost import CatBoostClassifier, CatBoostRegressor
 
-
 #from gahaco.models.train import training
 from gahaco.utils.config import load_config
 from gahaco.utils.optimize import merge_configs
@@ -47,29 +46,20 @@ class Model():
         Optimizer model hyper-parameters and upload results to cloud.
         """
         self.opt_config_file_path = opt_config_file_path
-
+        
+        print("# load model-optimization config")
         config = load_config(
             config_file_path=self.opt_config_file_path, purpose="optimize_tree"
         )
-        
-        if self.FLAGS.upload is False:
-            self.opt = Optimizer(
-                config,
-                api_key="VNQSdbR1pw33EkuHbUsGUSZWr",
-                project_name="general",
-                workspace="florpi",
-                experiment_class="OfflineExperiment",
-                offline_directory="/cosma/home/dp004/dc-beck3/4_GaHaCo/GaHaCo/comet/",
-                #offline_directory="/cosma/home/dp004/dc-cues1/GaHaCo/comet/",
-            )
-        else:
-            self.opt = Optimizer(
-                config,
-                api_key="VNQSdbR1pw33EkuHbUsGUSZWr",
-                project_name="general",
-                workspace="florpi",
-                experiment_class="Experiment",
-            )
+        self.opt = Optimizer(
+            config,
+            api_key="VNQSdbR1pw33EkuHbUsGUSZWr",
+            project_name="general",
+            workspace="florpi",
+            experiment_class="OfflineExperiment",
+            #offline_directory="/cosma/home/dp004/dc-beck3/4_GaHaCo/GaHaCo/comet/",
+            offline_directory="/cosma/home/dp004/dc-cues1/GaHaCo/comet/",
+        )
 
 
     def init_comet_experiment(self):
@@ -95,15 +85,10 @@ class Model():
         """
         Train/fit the model using the training data.
         """
-        print("---------------------->>>>>", x_train.columns)
-
-        # find categorical features
-        print(type(x_train["N_subhalos"][0]))
-
-
-        if self.kind == "lightgbm":
+        if self.kind == "lightgbm_":
 
             # Create the LightGBM training data containers
+            # TODO: put parameters into config
             # Note: LightGBM does not require pre-processing to balance dataset.
             #       It can achieve that by itself if parameter is set in config.
             x, x_eval, y, y_eval = train_test_split(
@@ -111,7 +96,7 @@ class Model():
                 y_train,
                 test_size=0.2,
                 random_state=42,
-                stratify=y_train
+                #stratify=y_train
             )
             lgb_train = lightgbm.Dataset(
                 x,
@@ -125,6 +110,7 @@ class Model():
             )
 
             # Initiate RNF-horizontal-tree and create forest
+            # TODO: put parameters into config
             model = lightgbm.train(
                 arg_model["parameters"],
                 lgb_train,
@@ -175,7 +161,7 @@ class Model():
         """
         Perform prediction after having trained/fitted the model.
         """
-        if self.kind == "lightgbm":
+        if self.kind == "lightgbm_":
             probabilities = model.predict(test_features, num_iteration=model.best_iteration)
             return  probabilities > 0.50
 
