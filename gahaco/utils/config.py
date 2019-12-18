@@ -15,7 +15,7 @@ import os
 # -----------------------------------------------------------------------------
 
 
-def load_config(config_file_path: str) -> dict:
+def load_config(config_file_path: str, purpose: str) -> dict:
     """
     Load and amend an experiment configuration.
     Args:
@@ -41,7 +41,8 @@ def load_config(config_file_path: str) -> dict:
     # Amend configuration (i.e., add implicitly defined variables)
     # -------------------------------------------------------------------------
 
-    # Add the path to the experiments folder to the config dict
-    config["experiment_dir"] = os.path.dirname(config_file_path)
+    if purpose is not 'optimize_tree':
+        # Add the path to the experiments folder to the config dict
+        config["experiment_dir"] = os.path.dirname(config_file_path)
 
     return config
