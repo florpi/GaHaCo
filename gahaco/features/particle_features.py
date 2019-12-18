@@ -308,7 +308,7 @@ class ParticleSnapshot:
                 self.nfw_profiles_radii[halo_idx, :] = -9999
                 self.nfw_profiles_value[halo_idx, :] = -9999
 
-            
+                
     def velocity_anisotropy(self, radius):
         """
         Get the velocity anisotropy parameter.
@@ -456,6 +456,12 @@ if __name__ == "__main__":
     #
     hf = h5py.File(output_dir + "halo_nfw_profiles.hdf5", 'w')
     hf.create_dataset('ID_DMO', data=snap.ID_DMO)
+<<<<<<< HEAD
     hf.create_dataset('radii', data=snap.nfw_profiles_radii)
     hf.create_dataset('values', data=snap.nfw_profiles_value)
     hf.close()
+=======
+    hf.create_dataset('radii', data=snap.profiles_radii)
+    hf.create_dataset('values', data=snap.profiles_value)
+    hf.close()
+>>>>>>> c96c94f92064a00381a1b99cc23712403ca5f5e0
