@@ -99,9 +99,8 @@ class ParticleSnapshot:
         )  #[Msun] particle mass
        
         # if halo properties aren't to be found at r200c
-        self.overdensity = overdensity
-        if self.overdensity == 2500:
-            self.find_overdensity_radius()
+        self.overdensity = overdensity_radius
+        self.find_overdensity_radius()
        
 
     def find_overdensity_radius(self):
@@ -136,7 +135,7 @@ class ParticleSnapshot:
                 r200c_physical*nfw_radii,
                 k=5
             )
-            self.overdensity_radius[halo_idx] = spl(2500)  #[Mpc]
+            self.overdensity_radius[halo_idx] = spl(self.overdensity[halo_idx])  #[Mpc]
 
 
     def concentration(self, method='prada'):
@@ -362,12 +361,10 @@ class ParticleSnapshot:
                 self.vel_ani_param[halo] = -9999
     
     
-    def deltarho_summary_stats(self, radius):
+    def deltarho_summary_stats(self):
         """
-        Get the velocity anisotropy parameter.
-        (DOI: 10.1016/j.nuclphysbps.2009.07.010; arxiv: 0810.3676)
+        Halo properties at a radii different from R200
 		"""
-        self.vmax = np.zeros(self.N_halos)
         self.mass = np.zeros(self.N_halos)
         self.vrms = np.zeros(self.N_halos)
 
@@ -398,53 +395,52 @@ class ParticleSnapshot:
         
                 if len(obj_part_pos) < 100:
                     # if resolution too low, skip
-                    self.vmax[halo] = -9999
                     self.vrms[halo] = -9999
                     self.mass[halo] = -9999
                     continue
 
             vel_norm = np.linalg.norm(obj_part_vel, axis=1)
 
-            self.vmax[halo] = _get_vmax(obj_part_pos)
             self.vrms[halo] = np.std(vel_norm)/np.sqrt(3)  # TODO double check
             self.mass[halo] = len(obj_part_vel) * self.Mpart
 
 
 if __name__ == "__main__":
-
+    
     snap = ParticleSnapshot(overdensity_radius=2500)
 
     # calculate properties
     #snap.concentration('prada')
-    snap.fit_nfw()
-    #snap.velocity_anisotropy()
+    #snap.fit_nfw()
+    snap.velocity_anisotropy()
     #snap.get_profile()
-    #snap.r2500_summary()
+    snap.deltarho_summary_stats()
 
     #
     # Store scalar features in pandas dataframe
     #
-    #features2save = np.vstack(
-    #    [
-    #        snap.ID_DMO,
-    #        prada_concentration,
-    #        snap.concentration,
-    #        snap.rho_s,
-    #        snap.chisq,
-    #        snap.m200c,
-    #    ]
-    #).T
-    #df = pd.DataFrame(
-    #    data=features2save,
-    #    columns=[
-    #        "ID_DMO",
-    #        "concentration_prada",
-    #        "concentration_nfw",
-    #        "rho_s",
-    #        "chisq_nfw",
-    #        "m200c",
-    #    ],
-    #)
+    features2save = np.vstack(
+        [
+            snap.ID_DMO,
+            snap.vrms,
+            snap.mass,
+            snap.vel_ani_param
+        ]
+    ).T
+    df = pd.DataFrame(
+        data=features2save,
+        columns=[
+            "ID_DMO",
+            #"concentration_prada",
+            #"concentration_nfw",
+            #"rho_s",
+            #"chisq_nfw",
+            #"m200c",
+            "vrms_2500",
+            "m2500c",
+            "beta_2500"
+        ],
+    )
     
     ## Save features to file
     output_dir = "/cosma7/data/dp004/dc-cues1/tng_dataframes/"
@@ -452,16 +448,10 @@ if __name__ == "__main__":
 
 
     #
-    # Store vector features in h5py
+    # Store profiles features in h5py
     #
-    hf = h5py.File(output_dir + "halo_nfw_profiles.hdf5", 'w')
-    hf.create_dataset('ID_DMO', data=snap.ID_DMO)
-<<<<<<< HEAD
-    hf.create_dataset('radii', data=snap.nfw_profiles_radii)
-    hf.create_dataset('values', data=snap.nfw_profiles_value)
-    hf.close()
-=======
-    hf.create_dataset('radii', data=snap.profiles_radii)
-    hf.create_dataset('values', data=snap.profiles_value)
-    hf.close()
->>>>>>> c96c94f92064a00381a1b99cc23712403ca5f5e0
+    #hf = h5py.File(output_dir + "halo_nfw_profiles.hdf5", 'w')
+    #hf.create_dataset('ID_DMO', data=snap.ID_DMO)
+    #hf.create_dataset('radii', data=snap.profiles_radii)
+    #hf.create_dataset('values', data=snap.profiles_value)
+    #hf.close()

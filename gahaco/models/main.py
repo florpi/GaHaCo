@@ -36,15 +36,14 @@ from gahaco.features.correlation import select_uncorrelated_features
 # -----------------------------------------------------------------------------
 # Flags 
 # -----------------------------------------------------------------------------
-<<<<<<< HEAD
-flags.DEFINE_string('model', 'catboost', 'model to run') # name ,default, help
-flags.DEFINE_integer('np', 1, 'Number of processes to run') 
+flags.DEFINE_string('model', 'lightgbm_reg', 'model to run') # name ,default, help
+flags.DEFINE_integer('np', 28, 'Number of processes to run') 
 flags.DEFINE_integer('n_splits', 2, 'Number of folds for cross-validation') 
 flags.DEFINE_boolean('upload', False, 'upload model to comet.ml, otherwise save in temporary folder') 
 flags.DEFINE_boolean('optimize_model', True, 'use comet.ml to perform hyper-param. optimization.') 
 flags.DEFINE_boolean('logging', True, 'save log files') 
 flags.DEFINE_boolean('mass_balance', False, 'balance dataset in different mass bins') 
-flags.DEFINE_boolean('figures', True, 'if final figures should be created') 
+flags.DEFINE_boolean('figures', False, 'if final figures should be created') 
 FLAGS = flags.FLAGS
 
 def main(argv):
@@ -83,11 +82,11 @@ def main(argv):
     if FLAGS.optimize_model:
         # model-/hyper-parameter optimization (run many experiments)
         for experiment in model.opt.get_experiments():
-            print('hyper-parameter optimization %s' % FLAGS.model)
             experiment.add_tag('hyper-parameter optimization %s' % FLAGS.model)
             config = merge_configs(config, model.opt, experiment)
             train(
-                model, experiment, features, labels, m200c, metric, sampler, skf, config, FLAGS)
+                model, experiment, features, labels, m200c, metric, sampler, skf, config, FLAGS
+            )
 
     else:
         # run one experiment
@@ -112,8 +111,9 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
 
     dropcol_importance,pm_importance,gini_importance,cms = ([] for i in range(4))
     hod_cms,hydro_tpcf,pred_tpcf,hod_tpcf = ([] for i in range(4))
+    halo_occs = []
 
-    fold=0
+    fold = 0
     for train_idx, test_idx in skf.split(features, labels):
         x_train, x_test = (features.iloc[train_idx], features.iloc[test_idx])
         y_train, y_test = (labels.iloc[train_idx], labels.iloc[test_idx])
@@ -123,25 +123,37 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             halo_occ = hod.HOD(m200c[train_idx], n_gals)
         else:
             halo_occ = hod.HOD(m200c[train_idx], y_train)
+
+        halo_occs.append(halo_occ)
         halo_occ.m200c = m200c[test_idx] 
-        n_hod_galaxies=halo_occ.populate_centrals()
+        n_hod_galaxies = halo_occ.populate_centrals()
         n_hod_galaxies = n_hod_galaxies > 0
 
         if sampler is not None:
             if FLAGS.mass_balance:
-                x_train, y_train = balance_dataset(x_train, y_train,
-                    sampler)
+                x_train, y_train = balance_dataset(
+                    x_train, y_train, sampler
+                )
             else:
-                x_train, y_train = balance_dataset(x_train, y_train,
-                    sampler, split=None)
+                x_train, y_train = balance_dataset(
+                    x_train, y_train, sampler, split=None
+                )
 
         ## Standarize features
         scaler = StandardScaler()
         scaler.fit(x_train)
         x_train_scaled = scaler.transform(x_train)
-        x_train = pd.DataFrame(x_train_scaled, index=x_train.index, columns=x_train.columns)
+        x_train = pd.DataFrame(
+            x_train_scaled,
+            index=x_train.index,
+            columns=x_train.columns
+        )
         x_test_scaled = scaler.transform(x_test)
-        x_test = pd.DataFrame(x_test_scaled, index=x_test.index, columns=x_test.columns)
+        x_test = pd.DataFrame(
+            x_test_scaled,
+            index=x_test.index,
+            columns=x_test.columns
+        )
 
         # Set-up and Run inference model
         trained_model = model.fit(x_train, y_train, config["model"])
@@ -151,16 +163,24 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         metric_value = metric(y_test, y_pred, **config["metric"]["params"])
         experiment.log_metric("f1", metric_value)
 
-        if (config['label']=='stellar_mass') or (config['label']=='nr_of_satellites'):
-            threshold = (y_test > 0.) & (y_pred > 0.)
-            r2 = r2_score(y_test[threshold], y_pred[threshold])
-            visualize.regression(
-                y_test[threshold], y_pred[threshold], r2, metric_value, fold=fold, experiment=experiment
-            )
-            visualize.histogram(
-                    y_test[threshold], y_pred[threshold], experiment
-            )
+
         if FLAGS.optimize_model is False:
+
+            if (config['label']=='stellar_mass') or (config['label']=='nr_of_satellites'):
+                threshold = (y_test > 0.) & (y_pred > 0.)
+                r2 = r2_score(y_test[threshold], y_pred[threshold])
+                visualize.regression(
+                    y_test[threshold],
+                    y_pred[threshold],
+                    r2,
+                    metric_value,
+                    fold=fold,
+                    experiment=experiment
+                )
+                visualize.histogram(
+                        y_test[threshold], y_pred[threshold], experiment
+                )
+
             if config['feature_optimization']['measure_importance']:
                 imp = feature_importance.dropcol(
                     trained_model,
@@ -194,18 +214,16 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
                 cms.append(cm)
 
-
             cm = confusion_matrix(y_test, n_hod_galaxies)
             cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
             hod_cms.append(cm)
 
-
-            test_hydro_pos, test_dmo_pos= load_positions(test_idx)
+            test_hydro_pos, test_dmo_pos = load_positions(test_idx)
             r_c, test_hydro_tpcf = compute_tpcf(test_hydro_pos[y_test>0])
             hydro_tpcf.append(test_hydro_tpcf)
             pred_tpcf.append(compute_tpcf(test_dmo_pos[y_pred>0])[1])
             hod_tpcf.append(compute_tpcf(test_dmo_pos[n_hod_galaxies])[1])
-            fold+=1
+            fold += 1
 
     if (FLAGS.optimize_model is False) and (FLAGS.figures is True):
         if (config['label'] != 'nr_of_satellites'):
@@ -229,6 +247,11 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             visualize.plot_tpcfs(
                 r_c, hydro_tpcf, pred_tpcf, hod_tpcf, experiment=experiment
             )
+            visualize.plot_tpcfs(
+                r_c, hydro_tpcf, None, hod_tpcf, experiment=experiment
+            )
+        else:
+            visualize.mean_halo_occupation(halo_occs, experiment=experiment)
 
         if FLAGS.optimize_model is False:
             visualize.plot_confusion_matrix(
@@ -242,10 +265,12 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 r_c, hydro_tpcf, pred_tpcf, hod_tpcf, experiment=experiment
             )
 
-            if 'save_importance' in config['feature_optimization']:
-                np.savetxt(
-                    f'../../models/{FLAGS.model}/gini_importances.csv',
-                    np.mean(gini_importance, axis=0)
+            if config['feature_optimization']['measure_importance']:
+                visualize.plot_feature_importance(
+                    dropcol_importance,
+                    x_train.columns,
+                    title='Drop column',
+                    experiment=experiment
                 )
                 visualize.plot_feature_importance(
                     pm_importance,

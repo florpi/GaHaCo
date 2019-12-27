@@ -1,0 +1,31 @@
+{
+    "label": "stellar_mass",
+    "model": {
+        "name": "lgbm",
+        "module": "lightgbm",
+        "class": "LGBMRegressor",
+        "parameters": {
+            "bagging_fraction": 1,
+            "boosting": "gbdt",
+            "feature_fraction": 1,
+            "learning_rate": 0.05,
+            "metric": "auc",
+            "max_depth": 10,
+            "min_split_gain": 0.01,
+            "num_leaves": 50,
+            "n_estimators": 200,
+            "objective": "regression",
+            "random_state": 0,
+            "verbose": 0
+        }
+    },
+	"metric": {
+		"module": "sklearn.metrics",
+		"method": "mean_squared_error",
+		"params": {}
+	},
+    "log_stellar_mass_threshold": 9,
+	"feature_optimization":{
+		"measure_importance": 1
+	}
+}
