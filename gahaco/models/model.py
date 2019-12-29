@@ -16,7 +16,7 @@ import lightgbm
 #from lightgbm import LGBMClassifier, LGBMRegressor
 
 import catboost
-from catboost import CatBoostClassifier, CatBoostRegressor
+#from catboost import CatBoostClassifier, CatBoostRegressor
 
 #from gahaco.models.train import training
 from gahaco.utils.config import load_config
@@ -57,8 +57,8 @@ class Model():
             project_name="general",
             workspace="florpi",
             experiment_class="OfflineExperiment",
-            #offline_directory="/cosma/home/dp004/dc-beck3/4_GaHaCo/GaHaCo/comet/",
-            offline_directory="/cosma/home/dp004/dc-cues1/GaHaCo/comet/",
+            offline_directory="/cosma/home/dp004/dc-beck3/4_GaHaCo/GaHaCo/comet/",
+            #offline_directory="/cosma/home/dp004/dc-cues1/GaHaCo/comet/",
         )
 
 
@@ -85,12 +85,10 @@ class Model():
         """
         Train/fit the model using the training data.
         """
-        if self.kind == "lightgbm_":
+        if self.kind == "lightgbm":
 
             # Create the LightGBM training data containers
             # TODO: put parameters into config
-            # Note: LightGBM does not require pre-processing to balance dataset.
-            #       It can achieve that by itself if parameter is set in config.
             x, x_eval, y, y_eval = train_test_split(
                 x_train,
                 y_train,
@@ -101,12 +99,12 @@ class Model():
             lgb_train = lightgbm.Dataset(
                 x,
                 label=y,
-                categorical_feature=["Nsubhalos", "Nmergers"],
+                #categorical_feature=["Nsubhalos", "Nmergers"], TODO Why not int?
             )
             lgb_eval = lightgbm.Dataset(
                 x_eval,
                 label=y_eval,
-                categorical_feature=["Nsubhalos", "Nmergers"],
+                #categorical_feature=["Nsubhalos", "Nmergers"],
             )
 
             # Initiate RNF-horizontal-tree and create forest
@@ -122,9 +120,12 @@ class Model():
             return model
 
         elif self.kind == "catboost":
-            print("  ---------------- ")
-            print(arg_model["parameters"])
-            print("  ---------------- ")
+            # for catboost label needs to be int/float
+            y_train *= 1
+            y_train = y_train.replace(0, -1)
+            
+            # checking for any categorical features
+            cate_features_index = np.where(x_train.dtypes != float)[0]
 
             x, x_eval, y, y_eval = train_test_split(
                 x_train,
@@ -134,18 +135,23 @@ class Model():
                 stratify=y_train
             )
             
-            model = CatBoostClassifier(**arg_model["parameters"])
+            if arg_model["class"] == "CatBoostClassifier":
+                from catboost import CatBoostClassifier
+                model = CatBoostClassifier(**arg_model["parameters"])
+            elif arg_model["class"] == "CatBoostRegressor":
+                from catboost import CatBoostRegressor
+                model = CatBoostRegressor(**arg_model["parameters"])
+           
             model.fit(
                 x,
                 y,
-                cat_features=["Nsubhalos", "Nmergers"],
+                cat_features=cate_features_index,
                 eval_set=(x_eval,y_eval),
             )
 
             return model
 
         else:
-
             model_module = importlib.import_module(arg_model["module"])
             model = getattr(model_module, arg_model['class'])
 
@@ -161,13 +167,14 @@ class Model():
         """
         Perform prediction after having trained/fitted the model.
         """
-        if self.kind == "lightgbm_":
+        if self.kind == "lightgbm":
             probabilities = model.predict(test_features, num_iteration=model.best_iteration)
+            #print("~~~~~~~~~~~~~~ ", probabilities.min(), probabilities.max())
             return  probabilities > 0.50
 
         elif self.kind == "catboost":
             probabilities = model.predict(test_features)
-            return probabilities
+            return probabilities > 0.50
 
         else:
             return model.predict(test_features)

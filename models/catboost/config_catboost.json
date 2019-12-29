@@ -5,28 +5,28 @@
     "model": {
         "name": "catboost",
         "module": "catboost",
+        "class": "CatBoostClassifier",
         "parameters": {
-            "learning_rate": 0.05,
-            "n_estimators": 50,
-            "max_depth": 10,
-            "colsample_bylevel": 1.0,
-            "l2_leaf_reg": 3.0,
-            "random_strength": 0.01,
             "bagging_temperature": 5,
-            "random_seed": 1232,
             "eval_metric": "F1",
-            "use_best_model": "True"
+            "l2_leaf_reg": 3.0,
+            "learning_rate": 0.05,
+            "loss_function": "Logloss",
+            "max_depth": 8,
+            "n_estimators": 60,
+            "random_strength": 0.01,
+            "random_seed": 42,
+            "rsm": 0.9,
+            "verbose": 0
         }
     },
     "metric": {
         "module": "sklearn.metrics",
         "method": "f1_score",
-        "params": {}
+        "params": {"average":"binary"}
     },
     "feature_optimization":{
-        "PCA": 0,
-        "measure_importance": 1,
-        "uncorrelated": 1
-    }
-
+        "measure_importance": 0,
+        "uncorrelated":0
+    } 
 }

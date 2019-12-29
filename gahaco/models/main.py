@@ -36,14 +36,14 @@ from gahaco.features.correlation import select_uncorrelated_features
 # -----------------------------------------------------------------------------
 # Flags 
 # -----------------------------------------------------------------------------
-flags.DEFINE_string('model', 'lightgbm_reg', 'model to run') # name ,default, help
-flags.DEFINE_integer('np', 28, 'Number of processes to run') 
-flags.DEFINE_integer('n_splits', 2, 'Number of folds for cross-validation') 
-flags.DEFINE_boolean('upload', False, 'upload model to comet.ml, otherwise save in temporary folder') 
-flags.DEFINE_boolean('optimize_model', True, 'use comet.ml to perform hyper-param. optimization.') 
-flags.DEFINE_boolean('logging', True, 'save log files') 
+flags.DEFINE_string('model', 'lightgbm', 'model to run') # name ,default, help
+flags.DEFINE_integer('np', 2, 'Number of processes to run') 
+flags.DEFINE_integer('n_splits', 4, 'Number of folds for cross-validation') 
+flags.DEFINE_boolean('upload', True, 'upload model to comet.ml, otherwise save in temporary folder') 
+flags.DEFINE_boolean('optimize_model', False, 'use comet.ml to perform hyper-param. optimization.') 
+flags.DEFINE_boolean('logging', False, 'save log files') 
 flags.DEFINE_boolean('mass_balance', False, 'balance dataset in different mass bins') 
-flags.DEFINE_boolean('figures', False, 'if final figures should be created') 
+flags.DEFINE_boolean('figures', True, 'if final figures should be created') 
 FLAGS = flags.FLAGS
 
 def main(argv):
@@ -159,9 +159,10 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         trained_model = model.fit(x_train, y_train, config["model"])
         y_pred = model.predict(trained_model, x_test, config["model"])
 
-
+        print(">>>>>>> test label", y_test)
+        print(">>>>>>> pred label", y_pred)
         metric_value = metric(y_test, y_pred, **config["metric"]["params"])
-        experiment.log_metric("f1", metric_value)
+        experiment.log_metric("mean_squared_error", metric_value)
 
 
         if FLAGS.optimize_model is False:
@@ -244,12 +245,12 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 title='HOD',
                 experiment = experiment,
             )
-            visualize.plot_tpcfs(
-                r_c, hydro_tpcf, pred_tpcf, hod_tpcf, experiment=experiment
-            )
-            visualize.plot_tpcfs(
-                r_c, hydro_tpcf, None, hod_tpcf, experiment=experiment
-            )
+            #visualize.plot_tpcfs(
+            #    r_c, hydro_tpcf, pred_tpcf, hod_tpcf, experiment=experiment
+            #)
+            #visualize.plot_tpcfs(
+            #    r_c, hydro_tpcf, None, hod_tpcf, experiment=experiment
+            #)
         else:
             visualize.mean_halo_occupation(halo_occs, experiment=experiment)
 
@@ -261,9 +262,9 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 title='HOD',
                 experiment = experiment,
             )
-            visualize.plot_tpcfs(
-                r_c, hydro_tpcf, pred_tpcf, hod_tpcf, experiment=experiment
-            )
+            #visualize.plot_tpcfs(
+            #    r_c, hydro_tpcf, pred_tpcf, hod_tpcf, experiment=experiment
+            #)
 
             if config['feature_optimization']['measure_importance']:
                 visualize.plot_feature_importance(
@@ -290,8 +291,10 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                         f'../../models/{FLAGS.model}/gini_importances.csv',
                         np.mean(gini_importance, axis=0)
                     )
-            sampling_method = config['sampling']['method']
-            experiment.add_tag(f'sampling = {sampling_method}')
+            
+            if "sampling" in config:
+                sampling_method = config['sampling']['method']
+                experiment.add_tag(f'sampling = {sampling_method}')
             experiment.add_tag(f'classifier = {FLAGS.model}')
 
     print('All good :)')
