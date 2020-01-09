@@ -159,8 +159,6 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         trained_model = model.fit(x_train, y_train, config["model"])
         y_pred = model.predict(trained_model, x_test, config["model"])
 
-        print(">>>>>>> test label", y_test)
-        print(">>>>>>> pred label", y_pred)
         metric_value = metric(y_test, y_pred, **config["metric"]["params"])
         experiment.log_metric("mean_squared_error", metric_value)
 

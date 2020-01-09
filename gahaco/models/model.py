@@ -99,12 +99,12 @@ class Model():
             lgb_train = lightgbm.Dataset(
                 x,
                 label=y,
-                #categorical_feature=["Nsubhalos", "Nmergers"], TODO Why not int?
+                #categorical_feature=["N_subhalos", "Nmergers"], TODO Why not int?
             )
             lgb_eval = lightgbm.Dataset(
                 x_eval,
                 label=y_eval,
-                #categorical_feature=["Nsubhalos", "Nmergers"],
+                #categorical_feature=["N_subhalos", "Nmergers"],
             )
 
             # Initiate RNF-horizontal-tree and create forest
@@ -169,7 +169,6 @@ class Model():
         """
         if self.kind == "lightgbm":
             probabilities = model.predict(test_features, num_iteration=model.best_iteration)
-            #print("~~~~~~~~~~~~~~ ", probabilities.min(), probabilities.max())
             return  probabilities > 0.50
 
         elif self.kind == "catboost":

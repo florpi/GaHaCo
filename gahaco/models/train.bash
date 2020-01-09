@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-#SBATCH --ntasks 64
+#SBATCH --ntasks 28
 #SBATCH -t 05:00:00
 #SBATCH -J gahaco_rnf
 #SBATCH -o ../../logs/gahaco_rnf.out
