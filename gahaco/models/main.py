@@ -104,12 +104,13 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             )
 
             feature_names = [f"PCA_{i}" for i in range(train["features"].shape[1])]
-        elif 'uncorrelated' in config['feature_optimization']:
+        elif config['feature_optimization']['uncorrelated']:
             gini_importances = np.loadtxt(f'../../models/{FLAGS.model}/gini_importances.csv')
             features = select_uncorrelated_features(features, gini_importances)
 
     dropcol_importance,pm_importance,gini_importance,cms = ([] for i in range(4))
     hod_cms,hydro_tpcf,pred_tpcf,hod_tpcf = ([] for i in range(4))
+    halo_occs = []
 
     fold=0
     for train_idx, test_idx in skf.split(features, labels):
@@ -121,6 +122,7 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             halo_occ = hod.HOD(m200c[train_idx], n_gals)
         else:
             halo_occ = hod.HOD(m200c[train_idx], y_train)
+        halo_occs.append(halo_occ)
         halo_occ.m200c = m200c[test_idx] 
         n_hod_galaxies=halo_occ.populate_centrals()
         n_hod_galaxies = n_hod_galaxies > 0
@@ -227,6 +229,12 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             visualize.plot_tpcfs(
                 r_c, hydro_tpcf, pred_tpcf, hod_tpcf, experiment=experiment
             )
+            visualize.plot_tpcfs(
+                r_c, hydro_tpcf, None, hod_tpcf, experiment=experiment
+            )
+
+        else:
+            visualize.mean_halo_occupation(halo_occs, experiment=experiment)
 
         if config['feature_optimization']['measure_importance']:
             visualize.plot_feature_importance(
@@ -248,13 +256,13 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 experiment=experiment,
             )
 
-            if 'save_importance' in config['feature_optimization']:
+            if config['feature_optimization']['save_importance']: 
                 np.savetxt(
                     f'../../models/{FLAGS.model}/gini_importances.csv',
                     np.mean(gini_importance, axis=0)
                 )
-        sampling_method = config['sampling']['method']
-        experiment.add_tag(f'sampling = {sampling_method}')
+        #sampling_method = config['sampling']['method']
+        #experiment.add_tag(f'sampling = {sampling_method}')
         experiment.add_tag(f'classifier = {FLAGS.model}')
 
     print('All good :)')

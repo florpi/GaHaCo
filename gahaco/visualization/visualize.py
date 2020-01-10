@@ -161,21 +161,24 @@ def plot_tpcfs(r_c,
     hydro_mean_folds = np.mean(hydro_tpcfs, axis=0)
     hydro_std_folds = np.std(hydro_tpcfs, axis=0)
 
-    pred_mean_folds = np.mean(pred_tpcfs, axis=0)
-    pred_std_folds = np.std(pred_tpcfs, axis=0)
+    if pred_tpcfs is not None:
+        pred_mean_folds = np.mean(pred_tpcfs, axis=0)
+        pred_std_folds = np.std(pred_tpcfs, axis=0)
 
     hod_mean_folds = np.mean(hod_tpcfs, axis=0)
     hod_std_folds = np.std(hod_tpcfs, axis=0)
 
     axes[0].errorbar(r_c, r_c**2*hydro_mean_folds, yerr = r_c**2*hydro_std_folds,
             label = f'TNG', color = 'black')
-    axes[0].errorbar(r_c, r_c**2*pred_mean_folds, yerr = r_c**2*pred_std_folds,
+    if pred_tpcfs is not None:
+        axes[0].errorbar(r_c, r_c**2*pred_mean_folds, yerr = r_c**2*pred_std_folds,
             label = f'ML', color = 'midnightblue')
     axes[0].errorbar(r_c, r_c**2*hod_mean_folds, label = f'HOD', color = 'indianred',
             yerr = r_c**2*hod_std_folds)
     axes[0].set_ylabel(r'$r^2{\xi}(r)$')
-    axes[1].plot(r_c, (pred_mean_folds- hydro_mean_folds)/hydro_std_folds, color = 'midnightblue')
-    axes[1].fill_between(r_c, (pred_mean_folds-pred_std_folds- hydro_mean_folds)/hydro_std_folds,
+    if pred_tpcfs is not None:
+        axes[1].plot(r_c, (pred_mean_folds- hydro_mean_folds)/hydro_std_folds, color = 'midnightblue')
+        axes[1].fill_between(r_c, (pred_mean_folds-pred_std_folds- hydro_mean_folds)/hydro_std_folds,
                     (pred_mean_folds+pred_std_folds- hydro_mean_folds)/hydro_std_folds,
                     color = 'midnightblue', alpha = 0.3)
     axes[1].plot(r_c, (hod_mean_folds- hydro_mean_folds)/hydro_std_folds, color = 'indianred')
@@ -360,3 +363,34 @@ def histogram(y_test, y_pred, experiment=None):
         return fig
 
 
+def mean_halo_occupation(halo_occ, experiment = None):
+
+    mean_measured_n_central = np.mean([h_occ.measured_n_central for h_occ in halo_occ], axis=0)
+    mean_n_central = np.mean([h_occ.mean_n_central for h_occ in halo_occ], axis=0)
+    mean_measured_n_satellites = np.mean([h_occ.measured_n_satellites for h_occ in halo_occ], axis=0)
+    mean_n_satellites = np.mean([h_occ.meaan_n_satellites for h_occ in halo_occ], axis=0)
+
+    #mass_c = np.linspace(np.min(halo_occ[0].mass_c), np.max(halo_occ[0].mass_c), 100)
+
+    fig = plt.figure()
+    ax = plt.axes()
+    ax.plot(halo_occ[0].mass_c, mean_measured_n_central,
+                marker='o', markersize=2,
+                linestyle = '',
+                color = 'blue', alpha = 0.4, label = 'Measured')
+
+    ax.plot(halo_occ[0].mass_c, mean_n_central,
+                   color= 'blue', label = 'HOD - Centrals')
+
+    ax.plot(halo_occ[0].mass_c, measured_n_satellites,
+                   linestyle = '', marker = 'o', markersize = 3,
+                          color = 'indianred', alpha = 0.4, label = 'Measured')
+    ax.plot(halo_occ[0].mass_c, 
+                    mean_n_central*mean_n_satellites,
+                           color= 'indianred', label = 'HOD - Satellites')
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+
+    ax.set_ylabel('Number of galaxies')
+    ax.set_xlabel(r'$M_{200c}$')
+    plt.legend()
