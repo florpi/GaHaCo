@@ -25,8 +25,8 @@
 		"params": {}
 	},
     "log_stellar_mass_threshold": 9,
-	"feature_optimization":{
-		"measure_importance": 1
-	}
+    "feature_optimization":{ "measure_importance": 1,
+                            "uncorrelated":1,
+                            "save_importance": 1}
 }
 
