@@ -359,7 +359,7 @@ class ParticleSnapshot:
                 vr = np.abs((obj_part_pos * obj_part_vel).sum(axis=1) / pos_norm)
 
                 try:
-                    vt = np.sqrt(vel_norm**2 - vr**2)
+                    vt = np.sqrt(vel_norm**2 - vr**2)  # in somce cases vel_norm < vr ???
                     sigma_r = np.std(vr)
                     sigma_t = np.std(vt)
                     self.vel_ani[halo] = 1 - 0.5*(sigma_t**2 / sigma_r**2)
