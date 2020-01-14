@@ -357,8 +357,11 @@ def regression_metrics(y_label, y_pred):
 def regression(y_label, y_pred, r2score, mse, fold=0, experiment=None):
 
     h = sns.jointplot(x=y_label, y=y_pred, kind='hex')
-    h.set_axis_labels('$log(M_{*, target}) \,\, [M_\odot]$',
-                '$log(M_{*, pred}) \,\, [M_\odot]$', fontsize=16)
+    h.set_axis_labels(
+        '$log(M_{*, target}) \,\, [M_\odot]$',
+        '$log(M_{*, pred}) \,\, [M_\odot]$',
+        fontsize=16
+    )
     h.ax_joint.text(8, 12, f"$R^2 = {r2score:.2f}$ ", fontsize = 13)
     h.ax_joint.text(8, 11.5, f"MSE$ = {mse:.3f}$ ", fontsize = 13)
 

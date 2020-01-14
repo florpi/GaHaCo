@@ -13,6 +13,7 @@ matching_file = 'MatchedHaloes_L205n2500.dat'
 additional_properties_file = 'HaloProfiles_DMO_z0.00_ext.hdf5'
 mergertree_file = 'MergerTree_L205n2500TNG_DM_ext_New.hdf5'
 halo_particles_file = 'halo_particle_summary.hdf5'
+inner_file = 'TNG300dark_halo_particle_ss_r2500c.hdf5'
 halo_mass_cut = 1.e11
 
 # ------------------ Halo matching between dmo and hydro simulations
@@ -82,10 +83,21 @@ particle_df = particle_df.drop(columns = ['m200c'])
 
 dmo_merged_df = pd.merge(dmo_merged_df, particle_df, on=['ID_DMO'])
 # Add velocity anisotropy
+
 anisotropy_df = pd.read_hdf(anisotropy_path)
 anisotropy_df = anisotropy_df.drop(columns=['index'])
 
 dmo_merged_df = pd.merge(dmo_merged_df, anisotropy_df, on=['ID_DMO'])
+
+# Add r2500c values
+inner_df = pd.read_hdf(data_path + inner_file)
+np.testing.assert_allclose(
+    inner_df.m200c, 10**dmo_merged_df.Group_M_Crit200, rtol = 1e-3
+)
+inner_df = inner_df.drop(columns = ['m200c'])
+inner_df = inner_df["m2500c"].apply(np.log10)
+
+dmo_merged_df = pd.merge(dmo_merged_df, inner_df, on=['ID_DMO'])
 
 # ----------- Read in properties from tng hydro 
 hydro_df = pd.read_hdf(data_path + hydro_file)

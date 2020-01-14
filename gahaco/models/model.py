@@ -11,7 +11,12 @@ import comet_ml
 from comet_ml import Experiment, OfflineExperiment, Optimizer
 
 from sklearn.model_selection import train_test_split
+
 import lightgbm
+#from lightgbm import LGBMClassifier, LGBMRegressor
+
+import catboost
+#from catboost import CatBoostClassifier, CatBoostRegressor
 
 #from gahaco.models.train import training
 from gahaco.utils.config import load_config
@@ -41,7 +46,7 @@ class Model():
         Optimizer model hyper-parameters and upload results to cloud.
         """
         self.opt_config_file_path = opt_config_file_path
-
+        
         print("# load model-optimization config")
         config = load_config(
             config_file_path=self.opt_config_file_path, purpose="optimize_tree"
@@ -52,8 +57,8 @@ class Model():
             project_name="general",
             workspace="florpi",
             experiment_class="OfflineExperiment",
-            #offline_directory="/cosma/home/dp004/dc-beck3/4_GaHaCo/GaHaCo/comet/",
-            offline_directory="/cosma/home/dp004/dc-cues1/GaHaCo/comet/",
+            offline_directory="/cosma/home/dp004/dc-beck3/4_GaHaCo/GaHaCo/comet/",
+            #offline_directory="/cosma/home/dp004/dc-cues1/GaHaCo/comet/",
         )
 
 
@@ -80,7 +85,7 @@ class Model():
         """
         Train/fit the model using the training data.
         """
-        if self.kind == "lightgbm_":
+        if self.kind == "lightgbm":
 
             # Create the LightGBM training data containers
             # TODO: put parameters into config
@@ -91,8 +96,16 @@ class Model():
                 random_state=42,
                 #stratify=y_train
             )
-            lgb_train = lightgbm.Dataset(x, label=y)
-            lgb_eval = lightgbm.Dataset(x_eval, label=y_eval)
+            lgb_train = lightgbm.Dataset(
+                x,
+                label=y,
+                #categorical_feature=["N_subhalos", "Nmergers"], TODO Why not int?
+            )
+            lgb_eval = lightgbm.Dataset(
+                x_eval,
+                label=y_eval,
+                #categorical_feature=["N_subhalos", "Nmergers"],
+            )
 
             # Initiate RNF-horizontal-tree and create forest
             # TODO: put parameters into config
@@ -107,15 +120,38 @@ class Model():
             return model
 
         elif self.kind == "catboost":
-            catboost.fit(
-                X_train,
+            # for catboost label needs to be int/float
+            y_train *= 1
+            y_train = y_train.replace(0, -1)
+            
+            # checking for any categorical features
+            cate_features_index = np.where(x_train.dtypes != float)[0]
+
+            x, x_eval, y, y_eval = train_test_split(
+                x_train,
                 y_train,
-                cat_features=categorical_columns_indices,
-                **arg_model["parameters"],
+                test_size=0.2,
+                random_state=42,
+                stratify=y_train
+            )
+            
+            if arg_model["class"] == "CatBoostClassifier":
+                from catboost import CatBoostClassifier
+                model = CatBoostClassifier(**arg_model["parameters"])
+            elif arg_model["class"] == "CatBoostRegressor":
+                from catboost import CatBoostRegressor
+                model = CatBoostRegressor(**arg_model["parameters"])
+           
+            model.fit(
+                x,
+                y,
+                cat_features=cate_features_index,
+                eval_set=(x_eval,y_eval),
             )
 
-        else:
+            return model
 
+        else:
             model_module = importlib.import_module(arg_model["module"])
             model = getattr(model_module, arg_model['class'])
 
@@ -131,12 +167,14 @@ class Model():
         """
         Perform prediction after having trained/fitted the model.
         """
-        if self.kind == "lightgbm_":
+        if self.kind == "lightgbm":
             probabilities = model.predict(test_features, num_iteration=model.best_iteration)
             return  probabilities > 0.50
+
         elif self.kind == "catboost":
-            #TODO
-            pass
+            probabilities = model.predict(test_features)
+            return probabilities > 0.50
+
         else:
             return model.predict(test_features)
 
