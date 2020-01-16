@@ -37,7 +37,7 @@ from gahaco.features.correlation import select_uncorrelated_features
 # -----------------------------------------------------------------------------
 # Flags 
 # -----------------------------------------------------------------------------
-flags.DEFINE_string('model', 'lightgbm_reg', 'model to run') # name ,default, help
+flags.DEFINE_string('model', 'lightgbm', 'model to run') # name ,default, help
 flags.DEFINE_integer('np', 2, 'Number of processes to run') 
 flags.DEFINE_integer('n_splits', 4, 'Number of folds for cross-validation') 
 flags.DEFINE_boolean('upload', True, 'upload model to comet.ml, otherwise save in temporary folder') 
@@ -53,7 +53,7 @@ def main(argv):
     opt_config_file_path = "../../models/%s/config_optimize.json" % (FLAGS.model)
     main_config_file_path = "../../models/%s/config_%s.json" % (FLAGS.model, FLAGS.model)
     config = load_config(config_file_path=main_config_file_path, purpose="")
-    config['model']['parameters']['n_jobs'] = FLAGS.np
+    #config['model']['parameters']['n_jobs'] = FLAGS.np
     print(f"Using {FLAGS.np} cores to fit models")
 
     # Initiate Model/Experiment
@@ -72,7 +72,7 @@ def main(argv):
         sampler_module = importlib.import_module(config["sampling"]["module"])
         sampler = getattr(sampler_module, config["sampling"]["method"])
     else:
-        sampler=None
+        sampler = None
 
     # K-fold validation setting
     if config['label']=='stellar_mass':
@@ -83,10 +83,11 @@ def main(argv):
     if FLAGS.optimize_model:
         # model-/hyper-parameter optimization (run many experiments)
         for experiment in model.opt.get_experiments():
-            experiment.add_tag('hyper-parameter optimization 1')
+            experiment.add_tag('hyper-parameter optimization %s' % FLAGS.model)
             config = merge_configs(config, model.opt, experiment)
             train(
-                model, experiment, features, labels, m200c, metric, sampler, skf, config, FLAGS)
+                model, experiment, features, labels, m200c, metric, sampler, skf, config, FLAGS
+            )
 
     else:
         # run one experiment
@@ -112,10 +113,11 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                                                     experiment=experiment)
 
     dropcol_importance,pm_importance,gini_importance,cms = ([] for i in range(4))
+
     hod_cms,hydro_tpcf,pred_tpcf,hod_tpcfs = ([] for i in range(4))
     halo_occs = []
 
-    fold=0
+    fold = 0
     for train_idx, test_idx in skf.split(features, labels):
         x_train, x_test = (features.iloc[train_idx], features.iloc[test_idx])
         y_train, y_test = (labels.iloc[train_idx], labels.iloc[test_idx])
@@ -159,16 +161,25 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                     x_train, y_train = balance_dataset(x_train, y_train,
                         sampler)
             else:
-                x_train, y_train = balance_dataset(x_train, y_train,
-                    sampler, split=None)
+                x_train, y_train = balance_dataset(
+                    x_train, y_train, sampler, split=None
+                )
 
         ## Standarize features
         scaler = StandardScaler()
         scaler.fit(x_train)
         x_train_scaled = scaler.transform(x_train)
-        x_train = pd.DataFrame(x_train_scaled, index=x_train.index, columns=x_train.columns)
+        x_train = pd.DataFrame(
+            x_train_scaled,
+            index=x_train.index,
+            columns=x_train.columns
+        )
         x_test_scaled = scaler.transform(x_test)
-        x_test = pd.DataFrame(x_test_scaled, index=x_test.index, columns=x_test.columns)
+        x_test = pd.DataFrame(
+            x_test_scaled,
+            index=x_test.index,
+            columns=x_test.columns
+        )
 
         # -----------------------------------------------------------------------------
         # FIT MODEL
@@ -178,7 +189,8 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         y_pred = model.predict(trained_model, x_test, config["model"])
 
         metric_value = metric(y_test, y_pred, **config["metric"]["params"])
-        experiment.log_metric("Metric value", metric_value)
+        experiment.log_metric("mean_squared_error", metric_value)
+
 
         # -----------------------------------------------------------------------------
         # SAVE FEATURE IMPORTANCE AND EVALUATION METRIC
@@ -191,6 +203,22 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 y_test[threshold], y_pred[threshold], r2, metric_value, fold=fold, experiment=experiment
             )
         if FLAGS.optimize_model is False:
+
+            if (config['label']=='stellar_mass') or (config['label']=='nr_of_satellites'):
+                threshold = (y_test > 0.) & (y_pred > 0.)
+                r2 = r2_score(y_test[threshold], y_pred[threshold])
+                visualize.regression(
+                    y_test[threshold],
+                    y_pred[threshold],
+                    r2,
+                    metric_value,
+                    fold=fold,
+                    experiment=experiment
+                )
+                visualize.histogram(
+                        y_test[threshold], y_pred[threshold], experiment
+                )
+
             if config['feature_optimization']['measure_importance']:
                 imp = feature_importance.dropcol(
                     trained_model,
@@ -216,6 +244,7 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 gini_importance.append(trained_model.feature_importances_)
 
             if (config['label']=='stellar_mass'):
+
                 cm, model_tpcf = summary.model_stellar_mass_summary(y_test, y_pred, 
                                                                 stellar_mass_thresholds,
                                                                 dmo_pos_test)
@@ -255,6 +284,7 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 r_c, hydro_tpcf, pred_tpcf, hod_tpcfs, experiment=experiment,
                 stellar_mass_thresholds=stellar_mass_thresholds
             )
+
             visualize.plot_tpcfs(
                 r_c, hydro_tpcf, None, hod_tpcfs, experiment=experiment,
                 stellar_mass_thresholds=stellar_mass_thresholds
@@ -282,6 +312,10 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 title='Gini impurity',
                 experiment=experiment,
             )
+            #visualize.plot_tpcfs(
+            #    r_c, hydro_tpcf, pred_tpcf, hod_tpcf, experiment=experiment
+            #)
+
 
             if config['feature_optimization']['save_importance']: 
                 np.savetxt(

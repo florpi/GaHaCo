@@ -1,30 +1,32 @@
 {
     "label": "dark_or_light",
     "sampling": {"module": "imblearn.under_sampling",
-				"method": "RandomUnderSampler"},
+                "method": "RandomUnderSampler"},
     "model": {
         "name": "catboost",
-        "module": "CatBoostClassifier",
+        "module": "catboost",
+        "class": "CatBoostClassifier",
         "parameters": {
-            "eval_metric": "AUC",
-            "boosting_type": "Plain",
-            "grow_policy": "Lossguide",
-            "max_leaves": 50,
-            "bagging_temperature": 1,
-            "subsample": 0,
-            "iterations": 1000,
-            "use_best_model": True,
+            "bagging_temperature": 5,
+            "eval_metric": "F1",
+            "l2_leaf_reg": 3.0,
             "learning_rate": 0.05,
-            "logging_level": "Silent",
+            "loss_function": "Logloss",
+            "max_depth": 8,
+            "n_estimators": 60,
+            "random_strength": 0.01,
+            "random_seed": 42,
+            "rsm": 0.9,
+            "verbose": 0
         }
     },
-	"metric": {
-		"module": "sklearn.metrics",
-		"method": "f1_score",
-		"params": {"average":"binary"}
-	},
-	"feature_optimization":{
-		"PCA": 0,
-		"measure_importance": 0
-	}
+    "metric": {
+        "module": "sklearn.metrics",
+        "method": "f1_score",
+        "params": {"average":"binary"}
+    },
+    "feature_optimization":{
+        "measure_importance": 0,
+        "uncorrelated":0
+    } 
 }
