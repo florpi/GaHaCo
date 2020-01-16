@@ -81,12 +81,12 @@ class HOD():
                                                 p0 = (11.,12., 0.8))
         return popt_sat 
 
-    def populate_centrals(self):
-        if(np.max(self.m200c) < 1.e5):
-            self.m200c = 10**self.m200c
+    def populate_centrals(self, m200c):
+        if(np.max(m200c) < 1.e5):
+            m200c = 10**m200c
         np.random.seed(22222)
-        Udf = np.random.uniform(0,1,len(self.m200c))
-        n_centrals = (self.mean_occupation_centrals(self.m200c,
+        Udf = np.random.uniform(0,1,len(m200c))
+        n_centrals = (self.mean_occupation_centrals(m200c,
                         **self.hod_parameters_centrals) > Udf).astype(int)
         return n_centrals
 

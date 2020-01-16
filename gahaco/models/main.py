@@ -24,6 +24,7 @@ from gahaco.features.feature_utils import (
     load_positions,
 )
 from gahaco.visualization import visualize
+from gahaco.utils import summary 
 from gahaco.models import hod
 from gahaco.models.model import Model
 from gahaco.utils.optimize import merge_configs
@@ -105,12 +106,15 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             )
 
             feature_names = [f"PCA_{i}" for i in range(train["features"].shape[1])]
-        elif 'uncorrelated' in config['feature_optimization']:
+        elif config['feature_optimization']['uncorrelated']:
             gini_importances = np.loadtxt(f'../../models/{FLAGS.model}/gini_importances.csv')
-            features = select_uncorrelated_features(features, gini_importances)
+            features = select_uncorrelated_features(features, 
+                                                    gini_impurities=gini_importances,
+                                                    experiment=experiment)
 
     dropcol_importance,pm_importance,gini_importance,cms = ([] for i in range(4))
-    hod_cms,hydro_tpcf,pred_tpcf,hod_tpcf = ([] for i in range(4))
+
+    hod_cms,hydro_tpcf,pred_tpcf,hod_tpcfs = ([] for i in range(4))
     halo_occs = []
 
     fold = 0
@@ -118,22 +122,44 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         x_train, x_test = (features.iloc[train_idx], features.iloc[test_idx])
         y_train, y_test = (labels.iloc[train_idx], labels.iloc[test_idx])
 
+
+        # -----------------------------------------------------------------------------
+        # BASELINE HOD MODEL EVALUATION 
+        # -----------------------------------------------------------------------------
+
+        hydro_pos_test, dmo_pos_test= load_positions(test_idx)
+
         if (config['label']=='stellar_mass'):
-            n_gals = y_train > config['log_stellar_mass_threshold']
-            halo_occ = hod.HOD(m200c[train_idx], n_gals)
+            stellar_mass_thresholds = [9, 9.2, 9.3]
+            halo_occ, hod_cm, hod_tpcf = summary.hod_stellar_mass_summary(m200c[train_idx], m200c[test_idx],
+                                                                        y_train, y_test,
+                                                                        stellar_mass_thresholds,
+                                                                        dmo_pos_test)
+
+            r_c, hydro_tpcf_test = summary.hydro_stellar_mass_summary(hydro_pos_test, y_test, stellar_mass_thresholds)
+
         else:
-            halo_occ = hod.HOD(m200c[train_idx], y_train)
+            stellar_mass_thresholds = [9]
+            halo_occ, hod_cm, hod_tpcf = summary.hod_summary(m200c[train_idx], m200c[test_idx], 
+                                                       y_train, y_test, dmo_pos_test)
+
+            r_c, hydro_tpcf_test = summary.hydro_summary(hydro_pos_test, y_test)
+
+        hydro_tpcf.append(hydro_tpcf_test)
 
         halo_occs.append(halo_occ)
-        halo_occ.m200c = m200c[test_idx] 
-        n_hod_galaxies = halo_occ.populate_centrals()
-        n_hod_galaxies = n_hod_galaxies > 0
+        hod_cms.append(hod_cm)
+        hod_tpcfs.append(hod_tpcf)
+
+        # -----------------------------------------------------------------------------
+        # PREPROCESS DATASET FOR TRAINING (balancing + normalisation)
+        # -----------------------------------------------------------------------------
+
 
         if sampler is not None:
             if FLAGS.mass_balance:
-                x_train, y_train = balance_dataset(
-                    x_train, y_train, sampler
-                )
+                    x_train, y_train = balance_dataset(x_train, y_train,
+                        sampler)
             else:
                 x_train, y_train = balance_dataset(
                     x_train, y_train, sampler, split=None
@@ -155,7 +181,10 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             columns=x_test.columns
         )
 
-        # Set-up and Run inference model
+        # -----------------------------------------------------------------------------
+        # FIT MODEL
+        # -----------------------------------------------------------------------------
+
         trained_model = model.fit(x_train, y_train, config["model"])
         y_pred = model.predict(trained_model, x_test, config["model"])
 
@@ -163,6 +192,16 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         experiment.log_metric("mean_squared_error", metric_value)
 
 
+        # -----------------------------------------------------------------------------
+        # SAVE FEATURE IMPORTANCE AND EVALUATION METRIC
+        # -----------------------------------------------------------------------------
+
+        if (config['label']=='stellar_mass') or (config['label']=='nr_of_satellites'):
+            threshold = (y_test > 0.) & (y_pred > 0.)
+            r2 = r2_score(y_test[threshold], y_pred[threshold])
+            visualize.regression(
+                y_test[threshold], y_pred[threshold], r2, metric_value, fold=fold, experiment=experiment
+            )
         if FLAGS.optimize_model is False:
 
             if (config['label']=='stellar_mass') or (config['label']=='nr_of_satellites'):
@@ -205,24 +244,20 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 gini_importance.append(trained_model.feature_importances_)
 
             if (config['label']=='stellar_mass'):
-                y_pred = y_pred > config['log_stellar_mass_threshold']
-                y_test = y_test > config['log_stellar_mass_threshold']
 
-            if (config['label'] != 'nr_of_satellites'):
-                cm = confusion_matrix(y_test, y_pred)
-                cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
-                cms.append(cm)
+                cm, model_tpcf = summary.model_stellar_mass_summary(y_test, y_pred, 
+                                                                stellar_mass_thresholds,
+                                                                dmo_pos_test)
+            else:
+                cm, model_tpcf = summary.model_summary(y_test, y_pred, dmo_pos_test)
 
-            cm = confusion_matrix(y_test, n_hod_galaxies)
-            cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
-            hod_cms.append(cm)
+            cms.append(cm)
+            pred_tpcf.append(model_tpcf)
+            fold+=1
 
-            test_hydro_pos, test_dmo_pos = load_positions(test_idx)
-            r_c, test_hydro_tpcf = compute_tpcf(test_hydro_pos[y_test>0])
-            hydro_tpcf.append(test_hydro_tpcf)
-            pred_tpcf.append(compute_tpcf(test_dmo_pos[y_pred>0])[1])
-            hod_tpcf.append(compute_tpcf(test_dmo_pos[n_hod_galaxies])[1])
-            fold += 1
+    # -----------------------------------------------------------------------------
+    # SUMMARY FIGURES
+    # -----------------------------------------------------------------------------
 
     if (FLAGS.optimize_model is False) and (FLAGS.figures is True):
         if (config['label'] != 'nr_of_satellites'):
@@ -233,8 +268,9 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 cms,
                 classes = ['Dark', 'Luminous'],
                 normalize = False,
-                title='Tree',
+                title='LGBM',
                 experiment = experiment,
+                stellar_mass_thresholds=stellar_mass_thresholds
             )
             visualize.plot_confusion_matrix(
                 hod_cms,
@@ -242,58 +278,51 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 normalize = False,
                 title='HOD',
                 experiment = experiment,
+                stellar_mass_thresholds=stellar_mass_thresholds
             )
-            #visualize.plot_tpcfs(
-            #    r_c, hydro_tpcf, pred_tpcf, hod_tpcf, experiment=experiment
-            #)
-            #visualize.plot_tpcfs(
-            #    r_c, hydro_tpcf, None, hod_tpcf, experiment=experiment
-            #)
+            visualize.plot_tpcfs(
+                r_c, hydro_tpcf, pred_tpcf, hod_tpcfs, experiment=experiment,
+                stellar_mass_thresholds=stellar_mass_thresholds
+            )
+
+            visualize.plot_tpcfs(
+                r_c, hydro_tpcf, None, hod_tpcfs, experiment=experiment,
+                stellar_mass_thresholds=stellar_mass_thresholds
+            )
+
         else:
             visualize.mean_halo_occupation(halo_occs, experiment=experiment)
 
-        if FLAGS.optimize_model is False:
-            visualize.plot_confusion_matrix(
-                hod_cms,
-                classes = ['Dark', 'Luminous'],
-                normalize = False,
-                title='HOD',
-                experiment = experiment,
+        if config['feature_optimization']['measure_importance']:
+            visualize.plot_feature_importance(
+                dropcol_importance,
+                x_train.columns,
+                title='Drop column',
+                experiment=experiment
+            )
+            visualize.plot_feature_importance(
+                pm_importance,
+                x_train.columns,
+                title='Permute column',
+                experiment=experiment
+            )
+            visualize.plot_feature_importance(
+                gini_importance,
+                x_train.columns,
+                title='Gini impurity',
+                experiment=experiment,
             )
             #visualize.plot_tpcfs(
             #    r_c, hydro_tpcf, pred_tpcf, hod_tpcf, experiment=experiment
             #)
 
-            if config['feature_optimization']['measure_importance']:
-                visualize.plot_feature_importance(
-                    dropcol_importance,
-                    x_train.columns,
-                    title='Drop column',
-                    experiment=experiment
-                )
-                visualize.plot_feature_importance(
-                    pm_importance,
-                    x_train.columns,
-                    title='Permute column',
-                    experiment=experiment
-                )
-                visualize.plot_feature_importance(
-                    gini_importance,
-                    x_train.columns,
-                    title='Gini impurity',
-                    experiment=experiment,
-                )
 
-                if not config['feature_optimization']['uncorrelated']:
-                    np.savetxt(
-                        f'../../models/{FLAGS.model}/gini_importances.csv',
-                        np.mean(gini_importance, axis=0)
-                    )
-            
-            if "sampling" in config:
-                sampling_method = config['sampling']['method']
-                experiment.add_tag(f'sampling = {sampling_method}')
-            experiment.add_tag(f'classifier = {FLAGS.model}')
+            if config['feature_optimization']['save_importance']: 
+                np.savetxt(
+                    f'../../models/{FLAGS.model}/gini_importances.csv',
+                    np.mean(gini_importance, axis=0)
+                )
+        experiment.add_tag(f'classifier = {FLAGS.model}')
 
     print('All good :)')
 
