@@ -34,7 +34,7 @@ class ParticleSnapshot:
     def __init__(
         self,
         overdensity,
-        h5_dir="/cosma7/data/TNG/TNG100-1-Dark/",
+        h5_dir="/cosma7/data/TNG/TNG300-1-Dark/",
         snapshot_number=99
         ):
         """
@@ -73,7 +73,7 @@ class ParticleSnapshot:
         self.cum_N_particles= np.cumsum(self.N_particles) - self.N_particles
         self.ID_DMO = np.arange(0, len(self.N_particles))
         # get only resolved halos
-        self.halo_mass_thresh = 1.0e11 
+        self.halo_mass_thresh = 5.0e10 
         self.halo_mass_cut = (
                 self.snapshot.cat["Group_M_Crit200"][:]*self.snapshot.header.hubble>self.halo_mass_thresh
         )
@@ -108,8 +108,7 @@ class ParticleSnapshot:
     def find_overdensity_radius(self):
         """
         """
-        nfw_file_path = "/cosma7/data/dp004/dc-cues1/tng_dataframes/halo_nfw_profiles.hdf5"
-        
+        nfw_file_path = "/cosma7/data/dp004/dc-cues1/tng_dataframes/TNG300dark_halo_nfw_profiles.hdf5"
         if not os.path.isfile(nfw_file_path):
             raise ImportError("File with NFW-profiles can't be opened")
 
@@ -380,7 +379,7 @@ class ParticleSnapshot:
         self.vrms_std = np.zeros(self.N_halos)
 
         # set random lines-of-sight along which to compute vrms
-        nr_rlos = 100
+        nr_rlos = 20
         los = np.random.rand(nr_rlos,3)
         los_norm = np.linalg.norm(los, axis=1)
         los_unit = [los[ii]/los_norm[ii] for ii in range(len(los_norm))]
@@ -461,13 +460,13 @@ class ParticleSnapshot:
 
 if __name__ == "__main__":
     
-    snap = ParticleSnapshot(overdensity=200)
+    snap = ParticleSnapshot(overdensity=2500)
 
     # calculate properties
-    snap.concentration('prada')
-    snap.fit_nfw()
+    #snap.concentration('prada')
+    #snap.fit_nfw()
     #snap.get_one_profile()
-    #snap.enclosed_mass()
+    snap.enclosed_mass()
     snap.velocity_anisotropy()
     snap.velocity_dispersion()
 
@@ -477,12 +476,12 @@ if __name__ == "__main__":
     features2save = np.vstack(
         [
             snap.ID_DMO,
-            snap.prada_concentration,
-            snap.nfw_concentration,
-            snap.rho_s,
-            snap.chisq,
+            #snap.prada_concentration,
+            #snap.nfw_concentration,
+            #snap.rho_s,
+            #snap.chisq,
             snap.m200c,
-            #snap.mass,
+            snap.mass,
             snap.vrms,
             snap.vrms_std,
             snap.vel_ani,
@@ -492,28 +491,32 @@ if __name__ == "__main__":
         data=features2save,
         columns=[
             "ID_DMO",
-            "concentration_prada",
-            "concentration_nfw",
-            "rho_s",
-            "chisq_nfw",
+            #"concentration_prada",
+            #"concentration_nfw",
+            #"rho_s",
+            #"chisq_nfw",
             "m200c",
-            #"m2500c",
-            "vrms_200c",
-            "vrms_std_200c",
-            "beta200c"
+            "m2500c",
+            "vrms_2500c",
+            "vrms_std_2500c",
+            "beta2500c"
         ],
     )
     
     ## Save features to file
     output_dir = "/cosma7/data/dp004/dc-cues1/tng_dataframes/"
-    df.to_hdf(output_dir + "TNG100dark_halo_particle_summary.hdf5", key="df", mode="w")
+    df.to_hdf(
+        output_dir + "TNG300dark_halo_particle_summary_r2500c.hdf5",
+        key="df",
+        mode="w"
+    )
 
 
     #
     # Store profiles features in h5py
     #
-    hf = h5py.File(output_dir + "TNG100dark_halo_nfw_profiles.hdf5", 'w')
-    hf.create_dataset('ID_DMO', data=snap.ID_DMO)
-    hf.create_dataset('radii', data=snap.nfw_profiles_radii)
-    hf.create_dataset('values', data=snap.nfw_profiles_value)
-    hf.close()
+    #hf = h5py.File(output_dir + "TNG300dark_halo_nfw_profiles.hdf5", 'w')
+    #hf.create_dataset('ID_DMO', data=snap.ID_DMO)
+    #hf.create_dataset('radii', data=snap.nfw_profiles_radii)
+    #hf.create_dataset('values', data=snap.nfw_profiles_value)
+    #hf.close()
