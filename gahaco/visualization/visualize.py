@@ -109,49 +109,6 @@ def plot_feature_importance(list_importances,
         return fig
 
 
-def compute_plot_tpcf(pred_positions, 
-        label_positions, 
-        hod_positions,
-        experiment=None):
-    """
-    Plots the ratio of the predicted correlation function to the simulation's one.
-
-    Args:
-        pred_positions: positions of the luminous objects predicted by the model.
-        label_positions: positions of the luminous objects in the simulation.
-        experiment: comet ml experiment to log the figure.
-    """
-
-    r_c, pred_tpcf = compute_tpcf(pred_positions)
-    r_c, label_tpcf = compute_tpcf(label_positions)
-    r_c, hod_tpcf = compute_tpcf(hod_positions)
-    
-    fig, axes = plt.subplots(nrows = 2, ncols = 1, sharex = True,
-                          gridspec_kw = {'height_ratios':[4,1]})
-
-
-    axes[0].plot(r_c, r_c**2*label_tpcf, label = 'Hydro', color = 'black')
-    axes[0].plot(r_c, r_c**2*pred_tpcf, label = 'RF', color = 'midnightblue',
-            linestyle='dashed')
-    axes[0].plot(r_c, r_c**2*hod_tpcf, label = 'HOD', color = 'indianred',
-            linestyle='dashed')
-    axes[0].set_ylabel(r'$r^2{\xi}(r)$')
-    axes[1].plot(r_c, pred_tpcf/label_tpcf, color = 'midnightblue')
-    axes[1].plot(r_c, hod_tpcf/label_tpcf, color = 'indianred')
-
-    axes[1].axhline(y = 1., color='gray', linestyle='dashed')
-    axes[1].fill_between(x = r_c, y1 = 0.99, y2 = 1.01, color = 'yellow')
-    axes[1].set_ylim(0.9,1.1)
-
-    axes[1].set_xlabel(r'$r$ [Mpc/h]')
-    axes[1].set_ylabel(r'$\Delta{\xi}/\sigma_{\xi}$')
-    axes[0].legend()
-
-    if experiment is not None:
-        experiment.log_figure(figure_name="2PCF", figure=fig)
-    else:
-        return fig
-
 def plot_tpcfs(r_c,
         hydro_tpcfs, 
         pred_tpcfs, 
