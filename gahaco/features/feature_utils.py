@@ -13,7 +13,7 @@ from imblearn.over_sampling import SMOTE
 
 def get_data(arg_label:str,
         path_to_file:str="/cosma7/data/dp004/dc-cues1/tng_dataframes/",
-        filename:str="merged_dataframe.h5", 
+        filename:str="merged_dataframe_v3.h5", 
             ):
     """
     """
@@ -22,11 +22,10 @@ def get_data(arg_label:str,
     df = df.fillna(-9999.)
 
     ids = df.ID_DMO
-    drop_list=["N_gals", "M_stars", "total_M_stars",
+    drop_list=["N_gals", "M_stars_central", "total_M_stars",
             "x_hydro", "y_hydro", "z_hydro", 
             "x_dmo", "y_dmo", "z_dmo",
             "M200_HYDRO", "ID_HYDRO", "ID_DMO",
-            "Cnfw",
             ]
     # Chose label
     if arg_label == "dark_or_light":
@@ -37,7 +36,7 @@ def get_data(arg_label:str,
         df = df[df.N_gals > 1]
         df = df.drop(columns=drop_list)
     elif arg_label == "stellar_mass":
-        df["labels"] = np.log10(df.M_stars)
+        df["labels"] = np.log10(df.M_stars_central)
         df["labels"] = df["labels"].replace([-np.inf, np.inf], 0.)
         df = df.drop(columns=drop_list)
     elif arg_label == "both":

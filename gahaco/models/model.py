@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split
 import lightgbm
 #from lightgbm import LGBMClassifier, LGBMRegressor
 
-import catboost
+#import catboost
 #from catboost import CatBoostClassifier, CatBoostRegressor
 
 #from gahaco.models.train import training

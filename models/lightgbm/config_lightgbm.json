@@ -25,7 +25,7 @@
     },
     "feature_optimization":{
         "measure_importance": 1,
-        "uncorrelated":1,
-        "save_importance": 0
+        "uncorrelated":0,
+        "save_importance": 1
     }
 }

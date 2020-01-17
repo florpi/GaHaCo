@@ -7,7 +7,7 @@ boxsize = 300.
 halo_mass_cut = 1.e11
 distance_threshold = 4.
 
-output_file = f"merged_dataframe_v2_threshold_{int(distance_threshold)}.h5"
+output_file = f"merged_dataframe_v3.h5"
 data_path = '/cosma7/data/dp004/dc-cues1/tng_dataframes/'
 mergertree_file = data_path + 'TNG%dDark_Hydro_MergerTree.hdf5' % (boxsize)
 subfind_dark_file = data_path + 'TNG%ddark_subfind.hdf5' % (boxsize)
@@ -66,11 +66,10 @@ np.testing.assert_allclose(
 hydro_merged_df = hydro_merged_df.drop(columns=['Group_M_Crit200' ])
 
 # Since matching is not 1-to-1, sum all the galaxies ----------------------------
-# TODO: reconsider the association criteria
 hydro_merged_df = distance.distance_criteria(hydro_merged_df, distance_threshold)
 n_gals_total = hydro_merged_df.groupby('ID_DMO')['N_gals'].sum()
 m_stars_total = hydro_merged_df.groupby('ID_DMO')['M_stars_central'].sum()
-
+hydro_merged_df = hydro_merged_df.drop(columns = ['N_gals', 'M_stars_central'])
 
 # Drop duplicates ---------------------------------------------------------------
 no_duplicates_df = hydro_merged_df.drop_duplicates(subset='ID_DMO', keep='last')
@@ -84,7 +83,5 @@ no_duplicates_df = pd.merge(
     no_duplicates_df, m_stars_total.to_frame('M_stars_central'), how='inner', on=['ID_DMO']
 
 )
-
 # Save final dataframe!
-
 no_duplicates_df.to_hdf(data_path + output_file, key = 'df', mode = 'w')

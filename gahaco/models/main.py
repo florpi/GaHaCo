@@ -37,7 +37,7 @@ from gahaco.features.correlation import select_uncorrelated_features
 # -----------------------------------------------------------------------------
 # Flags 
 # -----------------------------------------------------------------------------
-flags.DEFINE_string('model', 'lightgbm', 'model to run') # name ,default, help
+flags.DEFINE_string('model', 'lightgbm_reg', 'model to run') # name ,default, help
 flags.DEFINE_integer('np', 2, 'Number of processes to run') 
 flags.DEFINE_integer('n_splits', 4, 'Number of folds for cross-validation') 
 flags.DEFINE_boolean('upload', True, 'upload model to comet.ml, otherwise save in temporary folder') 
@@ -53,7 +53,6 @@ def main(argv):
     opt_config_file_path = "../../models/%s/config_optimize.json" % (FLAGS.model)
     main_config_file_path = "../../models/%s/config_%s.json" % (FLAGS.model, FLAGS.model)
     config = load_config(config_file_path=main_config_file_path, purpose="")
-    #config['model']['parameters']['n_jobs'] = FLAGS.np
     print(f"Using {FLAGS.np} cores to fit models")
 
     # Initiate Model/Experiment
@@ -61,7 +60,7 @@ def main(argv):
 
     # Load dataset
     features, labels = get_data(config["label"])
-    m200c = features.M200c.values
+    m200c = features.M200_DMO.values
     
     # Set metric
     metric_module = importlib.import_module(config["metric"]["module"])
