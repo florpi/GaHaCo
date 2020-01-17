@@ -39,7 +39,7 @@ np.testing.assert_allclose(
 dmo_df = dmo_df.drop(columns = ['m200c'])
 
 # R2500c
-pinner_df = pd.read_hdf(particle_outer_file)
+pinner_df = pd.read_hdf(particle_inner_file)
 pinner_df["m200c"] = pinner_df["m200c"].apply(lambda x: x*hubble)
 pinner_df = pinner_df.loc[pinner_df['m200c'] > halo_mass_cut]
 dmo_df = pd.merge(pinner_df, dmo_df, on=['ID_DMO'], how='inner')
