@@ -61,7 +61,7 @@ def main(argv):
 
     # Load dataset
     features, labels = get_data(config["label"])
-    m200c = features.M200c.values
+    m200c = features.M200_DMO.values
     
     # Set metric
     metric_module = importlib.import_module(config["metric"]["module"])
