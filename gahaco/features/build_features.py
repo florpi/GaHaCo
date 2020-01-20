@@ -5,9 +5,9 @@ from gahaco.utils import distance
 
 boxsize = 300.
 halo_mass_cut = 1.e11
-distance_threshold = 4.
+distance_threshold = 100.
 
-output_file = f"merged_dataframe_v3.h5"
+output_file = f"merged_dataframe_test.h5"
 data_path = '/cosma7/data/dp004/dc-cues1/tng_dataframes/'
 mergertree_file = data_path + 'TNG%dDark_Hydro_MergerTree.hdf5' % (boxsize)
 subfind_dark_file = data_path + 'TNG%ddark_subfind.hdf5' % (boxsize)
