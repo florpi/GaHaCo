@@ -4,11 +4,15 @@ from sklearn.metrics import confusion_matrix
 from gahaco.models import hod
 from gahaco.utils.tpcf import compute_tpcf
 
-def hod_stellar_mass_summary(m200c_train, m200c_test,
-        stellar_mass_train, stellar_mass_test, stellar_mass_thresholds, 
+def hod_stellar_mass_summary(
+        m200c_train,
+        m200c_test,
+        stellar_mass_train,
+        stellar_mass_test,
+        stellar_mass_thresholds, 
         dmo_pos_test):
 
-    halo_occs, hod_cms, hod_tpcfs  = [],[], []
+    halo_occs, hod_cms, hod_tpcfs = [],[],[]
     for threshold in stellar_mass_thresholds:
         n_gals_train = stellar_mass_train > threshold 
         n_gals_test = stellar_mass_test > threshold 

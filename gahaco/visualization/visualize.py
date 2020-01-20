@@ -1,3 +1,4 @@
+import glob
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -351,29 +352,82 @@ def histogram(y_test, y_pred, experiment=None):
 
 def mean_halo_occupation(halo_occ, experiment = None):
 
+    # IllustirsTNG Measurements 
     mean_measured_n_central = np.mean([h_occ.measured_n_central for h_occ in halo_occ], axis=0)
-    mean_n_central = np.mean([h_occ.mean_n_central for h_occ in halo_occ], axis=0)
     mean_measured_n_satellites = np.mean([h_occ.measured_n_satellites for h_occ in halo_occ], axis=0)
+    
+    # HOD Predictions
+    mean_n_central = np.mean([h_occ.mean_n_central for h_occ in halo_occ], axis=0)
+    mean_n_satellites = np.mean([h_occ.meaan_n_satellites for h_occ in halo_occ], axis=0)
+    
+    # RNF Predictions
+    rnf_pred_dir = "/cosma/home/dp004/dc-cues1/GaHaCo/models/lightgbm_reg/"
+    first = True
+    for rnf_file in glob.glob(rnf_pred_dir + "test_results_fold?_uncorrelated.h5"):
+        if first:
+            df_pred = pd.read_hdf(
+                rnf_pred_dir + "test_results_fold0_uncorrelated.h5", key='df'
+            )
+            first = False
+        else:
+            df_fold = pd.read_hdf(
+                rnf_pred_dir + "test_results_fold0_uncorrelated.h5", key='df'
+            )
+            df_pred = df_pred.append(df_fold, ignore_index=True)
+
+    data_path = "/cosma7/data/dp004/dc-cues1/tng_dataframes/"
+    df_tot = pd.read_hdf(data_path + "merged_dataframe_test.h5", key='df')
+    df_tot.sample()
+
+    pd.merge(
+        df_pred,
+        df_tot[["Formation Time", "M_stars_central", "M200_DMO"]],
+        on=["Formation Time"],
+        how='inner'
+    )
+
+
+    mean_n_central = np.mean([h_occ.mean_n_central for h_occ in halo_occ], axis=0)
     mean_n_satellites = np.mean([h_occ.meaan_n_satellites for h_occ in halo_occ], axis=0)
 
     #mass_c = np.linspace(np.min(halo_occ[0].mass_c), np.max(halo_occ[0].mass_c), 100)
 
     fig = plt.figure()
     ax = plt.axes()
-    ax.plot(halo_occ[0].mass_c, mean_measured_n_central,
-                marker='o', markersize=2,
-                linestyle = '',
-                color = 'blue', alpha = 0.4, label = 'Measured')
+    ax.plot(
+        halo_occ[0].mass_c,
+        mean_measured_n_central,
+        marker='o',
+        markersize=2,
+        linestyle='',
+        color='blue',
+        alpha=0.4,
+        label='Measured'
+    )
 
-    ax.plot(halo_occ[0].mass_c, mean_n_central,
-                   color= 'blue', label = 'HOD - Centrals')
+    ax.plot(
+        halo_occ[0].mass_c,
+        mean_n_central,
+        color='blue',
+        label='HOD - Centrals'
+    )
 
-    ax.plot(halo_occ[0].mass_c, measured_n_satellites,
-                   linestyle = '', marker = 'o', markersize = 3,
-                          color = 'indianred', alpha = 0.4, label = 'Measured')
-    ax.plot(halo_occ[0].mass_c, 
-                    mean_n_central*mean_n_satellites,
-                           color= 'indianred', label = 'HOD - Satellites')
+    ax.plot(
+        halo_occ[0].mass_c,
+        measured_n_satellites,
+        linestyle='',
+        marker='o',
+        markersize=3,
+        color='indianred',
+        alpha=0.4,
+        label='Measured'
+    )
+    ax.plot(
+        halo_occ[0].mass_c, 
+        mean_n_central*mean_n_satellites,
+        color='indianred',
+        label='HOD - Satellites'
+    )
     ax.set_xscale("log")
     ax.set_yscale("log")
 

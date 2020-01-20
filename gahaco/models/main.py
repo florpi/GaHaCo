@@ -130,12 +130,20 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
 
         if (config['label']=='stellar_mass'):
             stellar_mass_thresholds = [9, 9.2, 9.3]
-            halo_occ, hod_cm, hod_tpcf = summary.hod_stellar_mass_summary(m200c[train_idx], m200c[test_idx],
-                                                                        y_train, y_test,
-                                                                        stellar_mass_thresholds,
-                                                                        dmo_pos_test)
+            halo_occ, hod_cm, hod_tpcf = summary.hod_stellar_mass_summary(
+                m200c[train_idx],
+                m200c[test_idx],
+                y_train,
+                y_test,
+                stellar_mass_thresholds,
+                dmo_pos_test
+            )
 
-            r_c, hydro_tpcf_test = summary.hydro_stellar_mass_summary(hydro_pos_test, y_test, stellar_mass_thresholds)
+            r_c, hydro_tpcf_test = summary.hydro_stellar_mass_summary(
+                hydro_pos_test,
+                y_test,
+                stellar_mass_thresholds
+            )
 
         else:
             stellar_mass_thresholds = [9]
