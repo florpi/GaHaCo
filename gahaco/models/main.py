@@ -1,4 +1,4 @@
-import os, time
+import os, time, glob
 import logging
 from absl import flags, app
 import importlib
@@ -106,6 +106,7 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
 
             feature_names = [f"PCA_{i}" for i in range(train["features"].shape[1])]
         elif config['feature_optimization']['uncorrelated']:
+            print(glob.glob("../../models/lightgbm_reg/gini_importances.csv"))
             gini_importances = np.loadtxt(f'../../models/{FLAGS.model}/gini_importances.csv')
             features = select_uncorrelated_features(features, 
                                                     gini_impurities=gini_importances,

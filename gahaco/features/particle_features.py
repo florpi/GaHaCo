@@ -34,7 +34,7 @@ class ParticleSnapshot:
     def __init__(
         self,
         overdensity,
-        h5_dir="/cosma7/data/TNG/TNG300-1-Dark/",
+        h5_dir="/cosma7/data/TNG/TNG100-1-Dark/",
         snapshot_number=99
         ):
         """
@@ -108,7 +108,7 @@ class ParticleSnapshot:
     def find_overdensity_radius(self):
         """
         """
-        nfw_file_path = "/cosma7/data/dp004/dc-cues1/tng_dataframes/TNG300dark_halo_nfw_profiles.hdf5"
+        nfw_file_path = "/cosma7/data/dp004/dc-cues1/tng_dataframes/TNG100dark_halo_nfw_profiles.hdf5"
         if not os.path.isfile(nfw_file_path):
             raise ImportError("File with NFW-profiles can't be opened")
 
@@ -506,7 +506,7 @@ if __name__ == "__main__":
     ## Save features to file
     output_dir = "/cosma7/data/dp004/dc-cues1/tng_dataframes/"
     df.to_hdf(
-        output_dir + "TNG300dark_halo_particle_summary_r2500c.hdf5",
+        output_dir + "TNG100dark_halo_particle_summary_r2500c.hdf5",
         key="df",
         mode="w"
     )
@@ -515,7 +515,7 @@ if __name__ == "__main__":
     #
     # Store profiles features in h5py
     #
-    #hf = h5py.File(output_dir + "TNG300dark_halo_nfw_profiles.hdf5", 'w')
+    #hf = h5py.File(output_dir + "TNG100dark_halo_nfw_profiles.hdf5", 'w')
     #hf.create_dataset('ID_DMO', data=snap.ID_DMO)
     #hf.create_dataset('radii', data=snap.nfw_profiles_radii)
     #hf.create_dataset('values', data=snap.nfw_profiles_value)
