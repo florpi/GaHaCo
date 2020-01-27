@@ -3,11 +3,11 @@ import h5py
 import numpy as np
 from gahaco.utils import distance 
 
-boxsize = 300.
+boxsize = 300
 halo_mass_cut = 1.e11
 distance_threshold = 4.
 
-output_file = f"merged_dataframe_v3.h5"
+output_file = f"merged_dataframe_{boxsize}.h5"
 data_path = '/cosma7/data/dp004/dc-cues1/tng_dataframes/'
 mergertree_file = data_path + 'TNG%dDark_Hydro_MergerTree.hdf5' % (boxsize)
 subfind_dark_file = data_path + 'TNG%ddark_subfind.hdf5' % (boxsize)
@@ -21,10 +21,10 @@ dmo_df = mt_df.loc[mt_df['M200_HYDRO'] > halo_mass_cut]
 
 # Read SubFind Data -------------------------------------------------------------
 sf_df = pd.read_hdf(subfind_dark_file)
-sf_df = sf_df.loc[10**sf_df['Group_M_Crit200'] > halo_mass_cut]
+sf_df = sf_df.loc[sf_df['Group_M_Crit200'] > halo_mass_cut]
 dmo_df = pd.merge(sf_df, dmo_df, on=['ID_DMO'], how='inner')
 np.testing.assert_allclose(
-    10**dmo_df.Group_M_Crit200, dmo_df.M200_DMO, rtol=1e-3
+    dmo_df.Group_M_Crit200, dmo_df.M200_DMO, rtol=1e-3
 )
 dmo_df = dmo_df.drop(columns = ['Group_M_Crit200'])
 
@@ -61,7 +61,7 @@ hydro_merged_df = pd.merge(
     suffixes=('_dmo', '_hydro')
 )
 np.testing.assert_allclose(
-    hydro_merged_df.M200_HYDRO, 10**hydro_merged_df.Group_M_Crit200, rtol=1e-3
+    hydro_merged_df.M200_HYDRO, hydro_merged_df.Group_M_Crit200, rtol=1e-3
 )
 hydro_merged_df = hydro_merged_df.drop(columns=['Group_M_Crit200' ])
 

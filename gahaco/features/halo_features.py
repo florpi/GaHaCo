@@ -67,7 +67,7 @@ class Catalog:
             value = self.snapshot.cat[feature][self.firstsub]
             if ('Crit200' in feature) or ('Mass' in feature):
                 value *= self.snapshot.header.hubble
-            setattr(self, feature.replace('Subhalo', ''), value)
+            setattr(self, feature.replace('Subhalo', 'Central'), value)
 
         self.Spin= (np.linalg.norm(self.Spin, axis=1)/3.) / np.sqrt(2) / self.Group_R_Crit200/self.v200c
 
@@ -268,14 +268,14 @@ class Catalog:
 
 class HaloCatalog(Catalog):
 
-    def __init__(self, n_cores=1):
+    def __init__(self, tng=300, n_cores=1):
         """
         Class to read halo catalogs from simulation
 
         """
 
         # Read snapshot
-        h5_dir = "/cosma7/data/TNG/TNG300-1-Dark/"
+        h5_dir = f"/cosma7/data/TNG/TNG{tng}-1-Dark/"
         super().__init__(h5_dir, 99, n_cores)
         self.boxsize = self.snapshot.header.boxsize / self.snapshot.header.hubble # kpc
         self.halo_mass_thresh = 5.0e10 
@@ -333,14 +333,14 @@ class HaloCatalog(Catalog):
         self.compute_x_offset()
 
 class GalaxyCatalog(Catalog):
-    def __init__(self, snapnum=99):
+    def __init__(self, tng=300, snapnum=99):
         """
         Class to read galaxy catalogs from simulation
 
         """
         # Read snapshot
 
-        h5_dir = "/cosma7/data/TNG/TNG300-1/"
+        h5_dir = f"/cosma7/data/TNG/TNG{tng}-1/"
         super().__init__(h5_dir, 99)
         self.boxsize = self.snapshot.header.boxsize / self.snapshot.header.hubble # kpc
 
@@ -448,12 +448,13 @@ class GalaxyCatalog(Catalog):
 
 
 if __name__ == "__main__":
+    tng = 300
     parser = argparse.ArgumentParser(description='Execute in N cores')
     parser.add_argument('--np', dest='n_cpu', type=int, help='number of available cpus')
     args = parser.parse_args()
     print(f'There are {args.n_cpu} cores available')
 
-    halocat = HaloCatalog()
+    halocat = HaloCatalog(tng= tng)
 
     env_5 = halocat.Environment_subhalos(5)
     halocat.env_5 = np.log10(env_5)
@@ -462,11 +463,13 @@ if __name__ == "__main__":
 
     features_to_save = ['ID_DMO','N_subhalos', 'Group_M_Crit200', 'Group_R_Crit200',
             'VelDisp', 'Vmax', 'Spin', 'fsub_unbound', 'x_offset' , 'GroupPos',
-            "HalfmassRad","MassInMaxRad",
+            "HalfmassRad","MassInMaxRad","Mass",
             'env_5', 'env_10']
-    halocat.save_features('TNG300dark_subfind.hdf5', features_to_save)
+    halocat.save_features(f'TNG{tng}dark_subfind.hdf5', features_to_save)
 
-    galcat = GalaxyCatalog()
+    '''
+    galcat = GalaxyCatalog(tng=tng)
     features_to_save = ['ID_HYDRO','N_gals', 'M_stars_central', 'total_M_stars', 'Group_M_Crit200', 'GroupPos']
-    galcat.save_features('TNG300hydro_subfind.hdf5', features_to_save)
+    galcat.save_features(f'TNG{tng}hydro_subfind.hdf5', features_to_save)
     np.save(galcat.output_dir + 'galaxy_positions', galcat.pos_gals)
+    '''
