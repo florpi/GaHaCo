@@ -4,7 +4,7 @@ from nbodykit.lab import *
 from nbodykit.source.catalog.array import ArrayCatalog
 
 
-def compute_tpcf(positions: np.ndarray, boxsize: float = 302.6):
+def compute_tpcf(positions: np.ndarray, boxsize: float = 102.6):
     """
     Computes the real space two point correlation function using halotools
 
@@ -22,7 +22,7 @@ def compute_tpcf(positions: np.ndarray, boxsize: float = 302.6):
 
     return r_c, real_tpcf
 
-def compute_power_spectrum(positions: np.ndarray, boxsize: float = 302.6):
+def compute_power_spectrum(positions: np.ndarray, boxsize: float = 102.6):
     """
     Computes the real space power spectrum using nbodykit 
 

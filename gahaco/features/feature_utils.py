@@ -10,10 +10,12 @@ from sklearn.utils import resample
 
 from imblearn.over_sampling import SMOTE
 
+BOXSIZE = 100
+FILENAME = f"merged_dataframe_{int(BOXSIZE)}.h5"
 
 def get_data(arg_label:str,
         path_to_file:str="/cosma7/data/dp004/dc-cues1/tng_dataframes/",
-        filename:str="merged_dataframe.h5", 
+        filename:str= FILENAME, 
             ):
     """
     """
@@ -22,11 +24,11 @@ def get_data(arg_label:str,
     df = df.fillna(-9999.)
 
     ids = df.ID_DMO
-    drop_list=["N_gals", "M_stars", "total_M_stars",
+    drop_list=["N_gals", "M_stars_central", "total_M_stars",
             "x_hydro", "y_hydro", "z_hydro", 
             "x_dmo", "y_dmo", "z_dmo",
             "M200_HYDRO", "ID_HYDRO", "ID_DMO",
-            "Cnfw",
+            "displacement"
             ]
     # Chose label
     if arg_label == "dark_or_light":
@@ -37,7 +39,7 @@ def get_data(arg_label:str,
         df = df[df.N_gals > 1]
         df = df.drop(columns=drop_list)
     elif arg_label == "stellar_mass":
-        df["labels"] = np.log10(df.M_stars)
+        df["labels"] = np.log10(df.M_stars_central)
         df["labels"] = df["labels"].replace([-np.inf, np.inf], 0.)
         df = df.drop(columns=drop_list)
     elif arg_label == "both":
@@ -48,7 +50,7 @@ def get_data(arg_label:str,
 
 def load_positions(test_idx = None,
         path_to_file:str="/cosma7/data/dp004/dc-cues1/tng_dataframes/",
-        filename:str="merged_dataframe.h5", 
+        filename:str = FILENAME,
         ):
     hdf5_filename = path_to_file + filename
     df = pd.read_hdf(hdf5_filename, key="df", mode="r")

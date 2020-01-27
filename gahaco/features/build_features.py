@@ -1,11 +1,13 @@
 import pandas as pd
 import h5py
 import numpy as np
+from gahaco.utils import distance 
 
 boxsize = 300
 halo_mass_cut = 1.e11
+distance_threshold = 4.
 
-output_file = "merged_dataframe_v2.h5"
+output_file = f"merged_dataframe_{boxsize}.h5"
 data_path = '/cosma7/data/dp004/dc-cues1/tng_dataframes/'
 mergertree_file = data_path + 'TNG%dDark_Hydro_MergerTree.hdf5' % (boxsize)
 subfind_dark_file = data_path + 'TNG%ddark_subfind.hdf5' % (boxsize)
@@ -19,10 +21,10 @@ dmo_df = mt_df.loc[mt_df['M200_HYDRO'] > halo_mass_cut]
 
 # Read SubFind Data -------------------------------------------------------------
 sf_df = pd.read_hdf(subfind_dark_file)
-sf_df = sf_df.loc[10**sf_df['Group_M_Crit200'] > halo_mass_cut]
+sf_df = sf_df.loc[sf_df['Group_M_Crit200'] > halo_mass_cut]
 dmo_df = pd.merge(sf_df, dmo_df, on=['ID_DMO'], how='inner')
 np.testing.assert_allclose(
-    10**dmo_df.Group_M_Crit200, dmo_df.M200_DMO, rtol=1e-3
+    dmo_df.Group_M_Crit200, dmo_df.M200_DMO, rtol=1e-3
 )
 dmo_df = dmo_df.drop(columns = ['Group_M_Crit200'])
 
@@ -59,29 +61,27 @@ hydro_merged_df = pd.merge(
     suffixes=('_dmo', '_hydro')
 )
 np.testing.assert_allclose(
-    hydro_merged_df.M200_HYDRO, 10**hydro_merged_df.Group_M_Crit200, rtol=1e-3
+    hydro_merged_df.M200_HYDRO, hydro_merged_df.Group_M_Crit200, rtol=1e-3
 )
-hydro_merged_df = hydro_merged_df.drop(columns=['Group_M_Crit200', 'M200_DMO'])
-print(hydro_merged_df.columns)
+hydro_merged_df = hydro_merged_df.drop(columns=['Group_M_Crit200' ])
 
 # Since matching is not 1-to-1, sum all the galaxies ----------------------------
-# TODO: reconsider the association criteria
+hydro_merged_df = distance.distance_criteria(hydro_merged_df, distance_threshold)
 n_gals_total = hydro_merged_df.groupby('ID_DMO')['N_gals'].sum()
 m_stars_total = hydro_merged_df.groupby('ID_DMO')['M_stars_central'].sum()
+hydro_merged_df = hydro_merged_df.drop(columns = ['N_gals', 'M_stars_central'])
 
 # Drop duplicates ---------------------------------------------------------------
 no_duplicates_df = hydro_merged_df.drop_duplicates(subset='ID_DMO', keep='last')
 
+
 # Add column with total galaxies ------------------------------------------------
 no_duplicates_df = pd.merge(
-    no_duplicates_df, n_gals_total.to_frame('N_gals').reset_index()
+    no_duplicates_df, n_gals_total.to_frame('N_gals'), how='inner', on=['ID_DMO']
 )
 no_duplicates_df = pd.merge(
-    no_duplicates_df, m_stars_total.to_frame('M_stars_central').reset_index()
+    no_duplicates_df, m_stars_total.to_frame('M_stars_central'), how='inner', on=['ID_DMO']
+
 )
-
 # Save final dataframe!
-
-print(f'Saving final dataframe into {data_path + output_file}')
-
 no_duplicates_df.to_hdf(data_path + output_file, key = 'df', mode = 'w')

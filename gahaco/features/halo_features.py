@@ -67,11 +67,11 @@ class Catalog:
             value = self.snapshot.cat[feature][self.firstsub]
             if ('Crit200' in feature) or ('Mass' in feature):
                 value *= self.snapshot.header.hubble
-            setattr(self, feature.replace('Subhalo', ''), value)
+            setattr(self, feature.replace('Subhalo', 'Central'), value)
 
-        self.Spin= (np.linalg.norm(self.Spin, axis=1)/3.) / np.sqrt(2) / self.Group_R_Crit200/self.v200c
+        self.Spin= (np.linalg.norm(self.CentralSpin, axis=1)/3.) / np.sqrt(2) / self.Group_R_Crit200/self.v200c
 
-        self.bound_mass = self.MassType[:, self.dm] 
+        self.bound_mass = self.CentralMassType[:, self.dm] 
         self.total_mass = self.GroupMassType[:, self.dm]
 
 
@@ -248,10 +248,7 @@ class Catalog:
         feature_list = []
         for feature in features_to_save:
             if feature != 'GroupPos':
-                if ('M_Crit' in feature) or ('Mass' in feature) or ('Spin' in feature) or ('mass' in feature):
-                    feature_list.append(np.log10(getattr(self, feature)))
-                else:
-                    feature_list.append(getattr(self, feature))
+                feature_list.append(getattr(self, feature))
 
         feature_list = np.asarray(feature_list).T
         features_to_save.remove('GroupPos') if 'GroupPos' in features_to_save else None
@@ -271,17 +268,17 @@ class Catalog:
 
 class HaloCatalog(Catalog):
 
-    def __init__(self, n_cores=1):
+    def __init__(self, tng=300, n_cores=1):
         """
         Class to read halo catalogs from simulation
 
         """
 
         # Read snapshot
-        h5_dir = "/cosma7/data/TNG/TNG300-1-Dark/"
+        h5_dir = f"/cosma7/data/TNG/TNG{tng}-1-Dark/"
         super().__init__(h5_dir, 99, n_cores)
         self.boxsize = self.snapshot.header.boxsize / self.snapshot.header.hubble # kpc
-        self.halo_mass_thresh = 1.0e11 
+        self.halo_mass_thresh = 5.0e10 
 
         print("Minimum DM halo mass : %.2E" % self.halo_mass_thresh)
 
@@ -336,14 +333,14 @@ class HaloCatalog(Catalog):
         self.compute_x_offset()
 
 class GalaxyCatalog(Catalog):
-    def __init__(self, snapnum=99):
+    def __init__(self, tng=300, snapnum=99):
         """
         Class to read galaxy catalogs from simulation
 
         """
         # Read snapshot
 
-        h5_dir = "/cosma7/data/TNG/TNG300-1/"
+        h5_dir = f"/cosma7/data/TNG/TNG{tng}-1/"
         super().__init__(h5_dir, 99)
         self.boxsize = self.snapshot.header.boxsize / self.snapshot.header.hubble # kpc
 
@@ -385,7 +382,7 @@ class GalaxyCatalog(Catalog):
 
         self.Group_M_Crit200 = self.snapshot.cat['Group_M_Crit200'][self.halo_mass_cut] * self.snapshot.header.hubble
         self.GroupPos = self.snapshot.cat['GroupPos'][self.halo_mass_cut, :] 
-        self.N_gals, self.total_M_stars, self.M_stars = self.Number_of_galaxies()
+        self.N_gals, self.total_M_stars, self.M_stars_central = self.Number_of_galaxies()
         self.pos_gals = self.galaxy_positions()
         print("%d resolved galaxies found." % np.sum(self.N_gals))
 
@@ -408,15 +405,6 @@ class GalaxyCatalog(Catalog):
         total_M_stars = np.zeros((self.N_halos), dtype=np.int)
         M_stars_central = np.zeros((self.N_halos), dtype=np.int)
         for i in range(self.N_halos):
-            '''
-            first_subhalo = self.subhalo_offset[i] 
-            last_subhalo = self.subhalo_offset[i] + self.N_subhalos[i]
-
-            luminous_subhalos =  self.snapshot.cat["SubhaloMassType"][first_subhalo:last_subhalo,
-                    self.stars] > self.stellar_mass_thresh
-
-            '''
-
             N_gals[i] = np.sum(
                 self.snapshot.cat["SubhaloMassType"][
                     self.subhalo_offset[i] : self.subhalo_offset[i]
@@ -460,26 +448,13 @@ class GalaxyCatalog(Catalog):
 
 
 if __name__ == "__main__":
+    tng = 100
     parser = argparse.ArgumentParser(description='Execute in N cores')
     parser.add_argument('--np', dest='n_cpu', type=int, help='number of available cpus')
     args = parser.parse_args()
     print(f'There are {args.n_cpu} cores available')
 
-    '''
-    halocat = HaloCatalog(n_cores=args.n_cpu)
-    
-    pool = Pool(processes = args.n_cpu)
-    env_01 = partial(halocat.Environment_haas, 0.1)
-    haas_env_01 = pool.map(env_01, range(halocat.N_halos))
-    halocat.haas_env_01 = haas_env_01
-
-    env_1 = partial(halocat.Environment_haas, 1)
-    haas_env_1 = pool.map(env_1, range(halocat.N_halos))
-    halocat.haas_env_1 = haas_env_1
-
-    env_10 = partial(halocat.Environment_haas, 10)
-    haas_env_10 = pool.map(env_10, range(halocat.N_halos))
-    halocat.haas_env_10 = haas_env_10
+    halocat = HaloCatalog(tng= tng)
 
     env_5 = halocat.Environment_subhalos(5)
     halocat.env_5 = np.log10(env_5)
@@ -487,13 +462,12 @@ if __name__ == "__main__":
     halocat.env_10 = np.log10(env_10)
 
     features_to_save = ['ID_DMO','N_subhalos', 'Group_M_Crit200', 'Group_R_Crit200',
-            'VelDisp', 'Vmax', 'Spin', 'fsub_unbound', 'x_offset' , 'GroupPos',
-            "HalfmassRad","MassInMaxRad",
+            'CentralVelDisp', 'CentralVmax', 'Spin', 'fsub_unbound', 'x_offset' , 'GroupPos',
+            "CentralHalfmassRad","CentralMassInMaxRad","CentralMass",
             'env_5', 'env_10']
-    halocat.save_features('dmo_halos.hdf5', features_to_save)
+    halocat.save_features(f'TNG{tng}dark_subfind.hdf5', features_to_save)
 
-    '''
-    galcat = GalaxyCatalog()
-    #features_to_save = ['ID_HYDRO','N_gals', 'M_stars', 'total_M_stars', 'Group_M_Crit200', 'GroupPos']
-    #galcat.save_features('hydro_galaxies.hdf5', features_to_save)
+    galcat = GalaxyCatalog(tng=tng)
+    features_to_save = ['ID_HYDRO','N_gals', 'M_stars_central', 'total_M_stars', 'Group_M_Crit200', 'GroupPos']
+    galcat.save_features(f'TNG{tng}hydro_subfind.hdf5', features_to_save)
     np.save(galcat.output_dir + 'galaxy_positions', galcat.pos_gals)

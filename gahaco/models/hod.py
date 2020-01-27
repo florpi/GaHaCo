@@ -9,7 +9,8 @@ class HOD():
 
     def __init__(self, log_m200c, N_gals, satellites=False):
 
-        self.m200c = 10**log_m200c
+        #self.m200c = 10**log_m200c
+        self.m200c = log_m200c
         if satellites:
             n_centrals = N_gals > 0 
         else:
