@@ -45,7 +45,7 @@ flags.DEFINE_boolean('upload', True, 'upload model to comet.ml, otherwise save i
 flags.DEFINE_boolean('optimize_model', False, 'use comet.ml to perform hyper-param. optimization.') 
 flags.DEFINE_boolean('logging', False, 'save log files') 
 flags.DEFINE_boolean('mass_balance', False, 'balance dataset in different mass bins') 
-flags.DEFINE_boolean('figures', True, 'if final figures should be created') 
+flags.DEFINE_boolean('figures', False, 'if final figures should be created') 
 FLAGS = flags.FLAGS
 
 def main(argv):
@@ -127,24 +127,40 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         # BASELINE HOD MODEL EVALUATION 
         # -----------------------------------------------------------------------------
 
-        hydro_pos_test, dmo_pos_test= load_positions(test_idx, boxsize=FLAGS.boxsize)
+        hydro_pos_test, dmo_pos_test= load_positions(test_idx, boxsize=FLAGS.boxize)
 
         if (config['label']=='stellar_mass'):
-            stellar_mass_thresholds = np.array([9, 9.2, 9.3])
-            if FLAGS.boxsize == 100:
-                stellar_mass_thresholds *= 1.
-            halo_occ, hod_cm, hod_tpcf = summary.hod_stellar_mass_summary(m200c[train_idx], m200c[test_idx],
-                                                                        y_train, y_test,
-                                                                        stellar_mass_thresholds,
-                                                                        dmo_pos_test,
-                                                                        FLAGS.boxsize)
+            stellar_mass_thresholds = [9, 9.2, 9.3]
 
-            r_c, hydro_tpcf_test = summary.hydro_stellar_mass_summary(hydro_pos_test, y_test, stellar_mass_thresholds, FLAGS.boxsize)
+            if FLAGS.boxsize == 100:
+                stellar_mass_thresholds *= 1.4
+            
+            halo_occ, hod_cm, hod_tpcf = summary.hod_stellar_mass_summary(
+                m200c[train_idx], m200c[test_idx],
+                y_train,
+                y_test,
+                stellar_mass_thresholds,
+                dmo_pos_test
+                FLAGS.boxsize
+            )
+
+            r_c, hydro_tpcf_test = summary.hydro_stellar_mass_summary(
+                hydro_pos_test,
+                y_test,
+                stellar_mass_thresholds,
+                FLAGS.boxsize,
+            )
 
         else:
             stellar_mass_thresholds = [9]
-            halo_occ, hod_cm, hod_tpcf = summary.hod_summary(m200c[train_idx], m200c[test_idx], 
-                                                       y_train, y_test, dmo_pos_test, FLAGS.boxsize)
+            halo_occ, hod_cm, hod_tpcf = summary.hod_summary(
+                m200c[train_idx],
+                m200c[test_idx], 
+                y_train,
+                y_test,
+                dmo_pos_test,
+                FLAGS.boxsize
+            )
 
             r_c, hydro_tpcf_test = summary.hydro_summary(hydro_pos_test, y_test, FLAGS.boxsize)
 

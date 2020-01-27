@@ -85,7 +85,8 @@ class ParticleSnapshot:
         self.halo_pos = self.snapshot.cat['GroupPos'][self.halo_mass_cut] 
         self.halo_vel = self.snapshot.cat['GroupVel'][self.halo_mass_cut] 
         self.r200c = self.snapshot.cat['Group_R_Crit200'][self.halo_mass_cut]
-        self.m200c = self.snapshot.cat['Group_M_Crit200'][self.halo_mass_cut]
+        self.m200c = self.snapshot.cat['Group_M_Crit200'][self.halo_mass_cut] * \
+            self.h
         self.vmax = self.snapshot.cat['SubhaloVmax'][self.firstsub]
         self.N_halos = len(self.vmax)
 
