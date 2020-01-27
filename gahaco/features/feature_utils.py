@@ -10,7 +10,7 @@ from sklearn.utils import resample
 
 from imblearn.over_sampling import SMOTE
 
-BOXSIZE = 300
+BOXSIZE = 100
 FILENAME = f"merged_dataframe_{int(BOXSIZE)}.h5"
 
 def get_data(arg_label:str,
