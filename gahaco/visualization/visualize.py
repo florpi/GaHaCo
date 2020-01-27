@@ -208,40 +208,57 @@ def plot_tpcfs(
         figsize=(8, 12),
     )
 
-    colors = ["black", "midnightblue", "indianred"]
+    tng_color = 'black'
+    hod_color = 'midnightblue'
+    ml_color = 'indianred'
     for i, hdyro_mass in enumerate(hydro_std_folds):
         axes[0].errorbar(
             r_c,
             r_c ** 2 * (hydro_mean_folds[i]) + i * 50,
             yerr=r_c ** 2 * hydro_std_folds[i],
             label=f"TNG",
-            color=colors[i],
+            color=tng_color,
             linestyle="",
             marker="o",
             markersize=2,
         )
         if pred_tpcfs is not None:
-            axes[0].errorbar(
+            axes[0].plot(
                 r_c,
                 r_c ** 2 * (pred_mean_folds[i]) + i * 50,
-                yerr=r_c ** 2 * pred_std_folds[i],
+                #yerr=r_c ** 2 * pred_std_folds[i],
                 label=f"LGBM",
-                color=colors[i],
+                color=ml_color,
             )
-        axes[0].errorbar(
+            axes[0].fill_between(
+                    r_c,
+                    r_c ** 2 * (pred_mean_folds[i]) + i * 50  - r_c ** 2 * pred_std_folds[i], 
+                    r_c ** 2 * (pred_mean_folds[i]) + i * 50  + r_c ** 2 * pred_std_folds[i], 
+                    alpha=0.3,
+                    color = ml_color
+                    )
+        axes[0].plot(
             r_c,
             r_c ** 2 * (hod_mean_folds[i]) + i * 50,
             label=f"HOD",
-            color=colors[i],
-            yerr=r_c ** 2 * hod_std_folds[i],
+            color=hod_color,
+            #yerr=r_c ** 2 * hod_std_folds[i],
             linestyle="dashed",
         )
+        axes[0].fill_between(
+                r_c,
+                r_c ** 2 * (hod_mean_folds[i]) + i * 50 - r_c ** 2 * hod_std_folds[i],
+                r_c ** 2 * (hod_mean_folds[i]) + i * 50 + r_c ** 2 * hod_std_folds[i],
+                alpha=0.3,
+                color = hod_color
+                )
+
         axes[0].set_ylabel(r"$r^2{\xi}(r)$")
 
         axes[0].annotate(
             f"$M_\star > $ {10**stellar_mass_thresholds[i]:.1E}",
             (15, 20 + i * 50),
-            color=colors[i],
+            color='black',
         )
 
         axes[i + 1].axhline(y=0.0, color="gray", linestyle="dashed")
@@ -252,7 +269,7 @@ def plot_tpcfs(
             axes[i + 1].plot(
                 r_c,
                 (pred_mean_folds[i] - hydro_mean_folds[i]) / hydro_std_folds[i],
-                color=colors[i],
+                color=ml_color,
             )
             axes[i + 1].fill_between(
                 r_c,
@@ -260,13 +277,13 @@ def plot_tpcfs(
                 / hydro_std_folds[i],
                 (pred_mean_folds[i] + pred_std_folds[i] - hydro_mean_folds[i])
                 / hydro_std_folds[i],
-                color=colors[i],
+                color=ml_color,
                 alpha=0.3,
             )
         axes[i + 1].plot(
             r_c,
             (hod_mean_folds[i] - hydro_mean_folds[i]) / hydro_std_folds[i],
-            color=colors[i],
+            color=hod_color,
             linestyle="dashed",
         )
         axes[i + 1].fill_between(
@@ -275,7 +292,7 @@ def plot_tpcfs(
             / hydro_std_folds[i],
             (hod_mean_folds[i] + hod_std_folds[i] - hydro_mean_folds[i])
             / hydro_std_folds[i],
-            color=colors[i],
+            color=hod_color,
             alpha=0.3,
         )
 
