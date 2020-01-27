@@ -459,6 +459,10 @@ class GalaxyCatalog(Catalog):
         return pos_gals
 
 
+    def rescaling():
+        "arxiv:1707.03406"
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Execute in N cores')
     parser.add_argument('--np', dest='n_cpu', type=int, help='number of available cpus')
