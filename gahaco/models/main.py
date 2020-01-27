@@ -38,11 +38,11 @@ from gahaco.features.correlation import select_uncorrelated_features
 # Flags 
 # -----------------------------------------------------------------------------
 flags.DEFINE_string('model', 'lightgbm_reg', 'model to run') # name ,default, help
-flags.DEFINE_integer('boxsize', 100, 'TNG box to use: either 100 or 300')
-flags.DEFINE_integer('np', 10, 'Number of processes to run') 
-flags.DEFINE_integer('n_splits', 2, 'Number of folds for cross-validation') 
-flags.DEFINE_boolean('upload', False, 'upload model to comet.ml, otherwise save in temporary folder') 
-flags.DEFINE_boolean('optimize_model', True, 'use comet.ml to perform hyper-param. optimization.') 
+flags.DEFINE_integer('boxsize', 100, 'TNG box to use: either 100 or 300') 
+flags.DEFINE_integer('np', 2, 'Number of processes to run') 
+flags.DEFINE_integer('n_splits', 4, 'Number of folds for cross-validation') 
+flags.DEFINE_boolean('upload', True, 'upload model to comet.ml, otherwise save in temporary folder') 
+flags.DEFINE_boolean('optimize_model', False, 'use comet.ml to perform hyper-param. optimization.') 
 flags.DEFINE_boolean('logging', False, 'save log files') 
 flags.DEFINE_boolean('mass_balance', False, 'balance dataset in different mass bins') 
 flags.DEFINE_boolean('figures', False, 'if final figures should be created') 
@@ -61,7 +61,7 @@ def main(argv):
     model = Model(FLAGS, config, opt_config_file_path)
 
     # Load dataset
-    features, labels = get_data(config["label"])
+    features, labels = get_data(config["label"], boxsize=FLAGS.boxsize)
     m200c = features.M200_DMO.values
     
     # Set metric
@@ -239,9 +239,9 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             if (config['label']=='stellar_mass'):
                 cm, model_tpcf = summary.model_stellar_mass_summary(y_test, y_pred, 
                                                                 stellar_mass_thresholds,
-                                                                dmo_pos_test)
+                                                                dmo_pos_test, FLAGS.boxsize)
             else:
-                cm, model_tpcf = summary.model_summary(y_test, y_pred, dmo_pos_test)
+                cm, model_tpcf = summary.model_summary(y_test, y_pred, dmo_pos_test, FLAGS.boxsize)
 
             cms.append(cm)
             pred_tpcf.append(model_tpcf)
