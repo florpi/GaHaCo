@@ -3,7 +3,7 @@ import h5py
 import numpy as np
 from gahaco.utils import distance 
 
-boxsize = 100
+boxsize = 300
 halo_mass_cut = 1.e11
 distance_threshold = 4.
 
