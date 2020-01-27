@@ -4,7 +4,7 @@ from nbodykit.lab import *
 from nbodykit.source.catalog.array import ArrayCatalog
 
 
-def compute_tpcf(positions: np.ndarray, boxsize: float = 102.6):
+def compute_tpcf(positions: np.ndarray, boxsize: float = 100.):
     """
     Computes the real space two point correlation function using halotools
 

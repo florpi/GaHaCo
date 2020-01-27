@@ -10,15 +10,13 @@ from sklearn.utils import resample
 
 from imblearn.over_sampling import SMOTE
 
-BOXSIZE = 100
-FILENAME = f"merged_dataframe_{int(BOXSIZE)}.h5"
-
 def get_data(arg_label:str,
+        boxsize:int=100,
         path_to_file:str="/cosma7/data/dp004/dc-cues1/tng_dataframes/",
-        filename:str= FILENAME, 
             ):
     """
     """
+    filename = f"merged_dataframe_{boxsize}.h5"
     hdf5_filename = path_to_file + filename
     df = pd.read_hdf(hdf5_filename, key="df", mode="r")
     df = df.fillna(-9999.)
@@ -50,8 +48,9 @@ def get_data(arg_label:str,
 
 def load_positions(test_idx = None,
         path_to_file:str="/cosma7/data/dp004/dc-cues1/tng_dataframes/",
-        filename:str = FILENAME,
+        boxsize:int=100
         ):
+    filename = f"merged_dataframe_{int(boxsize)}.h5"
     hdf5_filename = path_to_file + filename
     df = pd.read_hdf(hdf5_filename, key="df", mode="r")
     if test_idx is not None:

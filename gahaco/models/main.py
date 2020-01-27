@@ -38,6 +38,7 @@ from gahaco.features.correlation import select_uncorrelated_features
 # Flags 
 # -----------------------------------------------------------------------------
 flags.DEFINE_string('model', 'lightgbm_reg', 'model to run') # name ,default, help
+flags.DEFINE_integer('boxsize', 100, 'TNG box to use: either 100 or 300') 
 flags.DEFINE_integer('np', 2, 'Number of processes to run') 
 flags.DEFINE_integer('n_splits', 4, 'Number of folds for cross-validation') 
 flags.DEFINE_boolean('upload', True, 'upload model to comet.ml, otherwise save in temporary folder') 
@@ -60,7 +61,7 @@ def main(argv):
     model = Model(FLAGS, config, opt_config_file_path)
 
     # Load dataset
-    features, labels = get_data(config["label"])
+    features, labels = get_data(config["label"], boxsize=FLAGS.boxsize)
     m200c = features.M200_DMO.values
     
     # Set metric
@@ -126,23 +127,26 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         # BASELINE HOD MODEL EVALUATION 
         # -----------------------------------------------------------------------------
 
-        hydro_pos_test, dmo_pos_test= load_positions(test_idx)
+        hydro_pos_test, dmo_pos_test= load_positions(test_idx, boxsize=FLAGS.boxsize)
 
         if (config['label']=='stellar_mass'):
-            stellar_mass_thresholds = [9, 9.2, 9.3]
+            stellar_mass_thresholds = np.array([9, 9.2, 9.3])
+            if FLAGS.boxsize == 100:
+                stellar_mass_thresholds *= 1.
             halo_occ, hod_cm, hod_tpcf = summary.hod_stellar_mass_summary(m200c[train_idx], m200c[test_idx],
                                                                         y_train, y_test,
                                                                         stellar_mass_thresholds,
-                                                                        dmo_pos_test)
+                                                                        dmo_pos_test,
+                                                                        FLAGS.boxsize)
 
-            r_c, hydro_tpcf_test = summary.hydro_stellar_mass_summary(hydro_pos_test, y_test, stellar_mass_thresholds)
+            r_c, hydro_tpcf_test = summary.hydro_stellar_mass_summary(hydro_pos_test, y_test, stellar_mass_thresholds, FLAGS.boxsize)
 
         else:
             stellar_mass_thresholds = [9]
             halo_occ, hod_cm, hod_tpcf = summary.hod_summary(m200c[train_idx], m200c[test_idx], 
-                                                       y_train, y_test, dmo_pos_test)
+                                                       y_train, y_test, dmo_pos_test, FLAGS.boxsize)
 
-            r_c, hydro_tpcf_test = summary.hydro_summary(hydro_pos_test, y_test)
+            r_c, hydro_tpcf_test = summary.hydro_summary(hydro_pos_test, y_test, FLAGS.boxsize)
 
         hydro_tpcf.append(hydro_tpcf_test)
 
@@ -219,9 +223,9 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             if (config['label']=='stellar_mass'):
                 cm, model_tpcf = summary.model_stellar_mass_summary(y_test, y_pred, 
                                                                 stellar_mass_thresholds,
-                                                                dmo_pos_test)
+                                                                dmo_pos_test, FLAGS.boxsize)
             else:
-                cm, model_tpcf = summary.model_summary(y_test, y_pred, dmo_pos_test)
+                cm, model_tpcf = summary.model_summary(y_test, y_pred, dmo_pos_test, FLAGS.boxsize)
 
             cms.append(cm)
             pred_tpcf.append(model_tpcf)
