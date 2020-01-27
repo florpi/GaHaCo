@@ -69,9 +69,9 @@ class Catalog:
                 value *= self.snapshot.header.hubble
             setattr(self, feature.replace('Subhalo', 'Central'), value)
 
-        self.Spin= (np.linalg.norm(self.Spin, axis=1)/3.) / np.sqrt(2) / self.Group_R_Crit200/self.v200c
+        self.Spin= (np.linalg.norm(self.CentralSpin, axis=1)/3.) / np.sqrt(2) / self.Group_R_Crit200/self.v200c
 
-        self.bound_mass = self.MassType[:, self.dm] 
+        self.bound_mass = self.CentralMassType[:, self.dm] 
         self.total_mass = self.GroupMassType[:, self.dm]
 
 
@@ -448,7 +448,7 @@ class GalaxyCatalog(Catalog):
 
 
 if __name__ == "__main__":
-    tng = 300
+    tng = 100
     parser = argparse.ArgumentParser(description='Execute in N cores')
     parser.add_argument('--np', dest='n_cpu', type=int, help='number of available cpus')
     args = parser.parse_args()
@@ -462,14 +462,12 @@ if __name__ == "__main__":
     halocat.env_10 = np.log10(env_10)
 
     features_to_save = ['ID_DMO','N_subhalos', 'Group_M_Crit200', 'Group_R_Crit200',
-            'VelDisp', 'Vmax', 'Spin', 'fsub_unbound', 'x_offset' , 'GroupPos',
-            "HalfmassRad","MassInMaxRad","Mass",
+            'CentralVelDisp', 'CentralVmax', 'Spin', 'fsub_unbound', 'x_offset' , 'GroupPos',
+            "CentralHalfmassRad","CentralMassInMaxRad","CentralMass",
             'env_5', 'env_10']
     halocat.save_features(f'TNG{tng}dark_subfind.hdf5', features_to_save)
 
-    '''
     galcat = GalaxyCatalog(tng=tng)
     features_to_save = ['ID_HYDRO','N_gals', 'M_stars_central', 'total_M_stars', 'Group_M_Crit200', 'GroupPos']
     galcat.save_features(f'TNG{tng}hydro_subfind.hdf5', features_to_save)
     np.save(galcat.output_dir + 'galaxy_positions', galcat.pos_gals)
-    '''

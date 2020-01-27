@@ -2,7 +2,7 @@ import pandas as pd
 import h5py
 import numpy as np
 
-tng = 100
+tng = 300
 
 if tng==100:
     extension = 'L75n1820' 
@@ -45,7 +45,7 @@ else:
 
 if tng==300:
     mergertree_df = pd.DataFrame(data = mergertree_data, 
-                columns = ['ID_DMO', 'Formation Time', 'Nmergers','MassPeak', 'vpeak'])
+                columns = ['ID_DMO', 'Formation Time', 'Nmergers',])#'MassPeak', 'vpeak'])
 else:
     mergertree_df = pd.DataFrame(data = mergertree_data, 
                 columns = ['ID_DMO', 'Formation Time' ])
