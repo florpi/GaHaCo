@@ -10,7 +10,8 @@ from sklearn.utils import resample
 
 from imblearn.over_sampling import SMOTE
 
-FILENAME = "merged_dataframe_v3.h5"
+BOXSIZE = 300
+FILENAME = f"merged_dataframe_{int(BOXSIZE)}.h5"
 
 def get_data(arg_label:str,
         path_to_file:str="/cosma7/data/dp004/dc-cues1/tng_dataframes/",
