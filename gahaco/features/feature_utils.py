@@ -10,10 +10,11 @@ from sklearn.utils import resample
 
 from imblearn.over_sampling import SMOTE
 
+FILENAME = "merged_dataframe_v3.h5"
 
 def get_data(arg_label:str,
         path_to_file:str="/cosma7/data/dp004/dc-cues1/tng_dataframes/",
-        filename:str="merged_dataframe_v3.h5", 
+        filename:str= FILENAME, 
             ):
     """
     """
@@ -26,6 +27,7 @@ def get_data(arg_label:str,
             "x_hydro", "y_hydro", "z_hydro", 
             "x_dmo", "y_dmo", "z_dmo",
             "M200_HYDRO", "ID_HYDRO", "ID_DMO",
+            "displacement"
             ]
     # Chose label
     if arg_label == "dark_or_light":
@@ -47,7 +49,7 @@ def get_data(arg_label:str,
 
 def load_positions(test_idx = None,
         path_to_file:str="/cosma7/data/dp004/dc-cues1/tng_dataframes/",
-        filename:str="merged_dataframe.h5", 
+        filename:str = FILENAME,
         ):
     hdf5_filename = path_to_file + filename
     df = pd.read_hdf(hdf5_filename, key="df", mode="r")

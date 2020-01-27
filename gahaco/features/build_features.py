@@ -5,7 +5,7 @@ from gahaco.utils import distance
 
 boxsize = 300
 halo_mass_cut = 1.e11
-distance_threshold = 4.
+distance_threshold = 100.
 
 output_file = f"merged_dataframe_{boxsize}.h5"
 data_path = '/cosma7/data/dp004/dc-cues1/tng_dataframes/'
