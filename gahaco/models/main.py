@@ -39,10 +39,10 @@ from gahaco.features.correlation import select_uncorrelated_features
 # -----------------------------------------------------------------------------
 flags.DEFINE_string('model', 'lightgbm_reg', 'model to run') # name ,default, help
 flags.DEFINE_integer('boxsize', 100, 'TNG box to use: either 100 or 300') 
-flags.DEFINE_integer('np', 2, 'Number of processes to run') 
-flags.DEFINE_integer('n_splits', 4, 'Number of folds for cross-validation') 
-flags.DEFINE_boolean('upload', True, 'upload model to comet.ml, otherwise save in temporary folder') 
-flags.DEFINE_boolean('optimize_model', False, 'use comet.ml to perform hyper-param. optimization.') 
+flags.DEFINE_integer('np', 10, 'Number of processes to run') 
+flags.DEFINE_integer('n_splits', 2, 'Number of folds for cross-validation') 
+flags.DEFINE_boolean('upload', False, 'upload model to comet.ml, otherwise save in temporary folder') 
+flags.DEFINE_boolean('optimize_model', True, 'use comet.ml to perform hyper-param. optimization.') 
 flags.DEFINE_boolean('logging', False, 'save log files') 
 flags.DEFINE_boolean('mass_balance', False, 'balance dataset in different mass bins') 
 flags.DEFINE_boolean('figures', False, 'if final figures should be created') 
@@ -84,7 +84,8 @@ def main(argv):
     if FLAGS.optimize_model:
         # model-/hyper-parameter optimization (run many experiments)
         for experiment in model.opt.get_experiments():
-            experiment.add_tag('hyper-parameter optimization 1')
+            experiment.add_tag(
+                'hyper-parameter optimization %s for %s' % (FLAGS.model, FLAGS.boxsize))
             config = merge_configs(config, model.opt, experiment)
             train(
                 model, experiment, features, labels, m200c, metric, sampler, skf, config, FLAGS)
@@ -127,48 +128,47 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         # BASELINE HOD MODEL EVALUATION 
         # -----------------------------------------------------------------------------
 
-        hydro_pos_test, dmo_pos_test= load_positions(test_idx, boxsize=FLAGS.boxize)
+        hydro_pos_test, dmo_pos_test = load_positions(test_idx, boxsize=FLAGS.boxsize)
 
-        if (config['label']=='stellar_mass'):
-            stellar_mass_thresholds = [9, 9.2, 9.3]
+        if FLAGS.optimize_model is False:
+            if (config['label']=='stellar_mass'):
+                stellar_mass_thresholds = np.array([9, 9.2, 9.3])
 
-            if FLAGS.boxsize == 100:
-                stellar_mass_thresholds *= 1.4
-            
-            halo_occ, hod_cm, hod_tpcf = summary.hod_stellar_mass_summary(
-                m200c[train_idx], m200c[test_idx],
-                y_train,
-                y_test,
-                stellar_mass_thresholds,
-                dmo_pos_test
-                FLAGS.boxsize
-            )
+                halo_occ, hod_cm, hod_tpcf = summary.hod_stellar_mass_summary(
+                    m200c[train_idx], m200c[test_idx],
+                    y_train,
+                    y_test,
+                    stellar_mass_thresholds,
+                    dmo_pos_test,
+                    FLAGS.boxsize
+                )
 
-            r_c, hydro_tpcf_test = summary.hydro_stellar_mass_summary(
-                hydro_pos_test,
-                y_test,
-                stellar_mass_thresholds,
-                FLAGS.boxsize,
-            )
+                r_c, hydro_tpcf_test = summary.hydro_stellar_mass_summary(
+                    hydro_pos_test,
+                    y_test,
+                    stellar_mass_thresholds,
+                    FLAGS.boxsize,
+                )
 
-        else:
-            stellar_mass_thresholds = [9]
-            halo_occ, hod_cm, hod_tpcf = summary.hod_summary(
-                m200c[train_idx],
-                m200c[test_idx], 
-                y_train,
-                y_test,
-                dmo_pos_test,
-                FLAGS.boxsize
-            )
+            else:
+                stellar_mass_thresholds = [9]
+                halo_occ, hod_cm, hod_tpcf = summary.hod_summary(
+                    m200c[train_idx],
+                    m200c[test_idx], 
+                    y_train,
+                    y_test,
+                    dmo_pos_test,
+                    FLAGS.boxsize
+                )
 
-            r_c, hydro_tpcf_test = summary.hydro_summary(hydro_pos_test, y_test, FLAGS.boxsize)
+                r_c, hydro_tpcf_test = summary.hydro_summary(
+                    hydro_pos_test, y_test, FLAGS.boxsize
+                )
 
-        hydro_tpcf.append(hydro_tpcf_test)
-
-        halo_occs.append(halo_occ)
-        hod_cms.append(hod_cm)
-        hod_tpcfs.append(hod_tpcf)
+            hydro_tpcf.append(hydro_tpcf_test)
+            halo_occs.append(halo_occ)
+            hod_cms.append(hod_cm)
+            hod_tpcfs.append(hod_tpcf)
 
         # -----------------------------------------------------------------------------
         # PREPROCESS DATASET FOR TRAINING (balancing + normalisation)
