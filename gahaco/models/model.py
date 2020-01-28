@@ -46,14 +46,15 @@ class Model():
         config = load_config(
             config_file_path=self.opt_config_file_path, purpose="optimize_tree"
         )
+        element.pop("metric", None)
         self.opt = Optimizer(
             config,
             api_key="VNQSdbR1pw33EkuHbUsGUSZWr",
             project_name="general",
             workspace="florpi",
             experiment_class="OfflineExperiment",
-            #offline_directory="/cosma/home/dp004/dc-beck3/4_GaHaCo/GaHaCo/comet/",
-            offline_directory="/cosma/home/dp004/dc-cues1/GaHaCo/comet/",
+            offline_directory="/cosma/home/dp004/dc-beck3/4_GaHaCo/GaHaCo/comet/",
+            #offline_directory="/cosma/home/dp004/dc-cues1/GaHaCo/comet/",
         )
 
 
@@ -72,7 +73,7 @@ class Model():
                 api_key="VNQSdbR1pw33EkuHbUsGUSZWr",
                 project_name="general",
                 workspace="florpi",
-                offline_directory="/cosma/home/dp004/dc-cues1/GaHaCo/comet/",
+                offline_directory="/cosma/home/dp004/dc-beck3/4_GaHaCo/GaHaCo/comet/",
             )
         self.experiment = experiment
     
