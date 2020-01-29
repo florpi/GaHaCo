@@ -38,7 +38,7 @@ from gahaco.features.correlation import select_uncorrelated_features
 # Flags 
 # -----------------------------------------------------------------------------
 flags.DEFINE_string('model', 'lightgbm_reg', 'model to run') # name ,default, help
-flags.DEFINE_integer('boxsize', 100, 'TNG box to use: either 100 or 300') 
+flags.DEFINE_integer('boxsize', 300, 'TNG box to use: either 100 or 300') 
 flags.DEFINE_integer('np', 2, 'Number of processes to run') 
 flags.DEFINE_integer('n_splits', 4, 'Number of folds for cross-validation') 
 flags.DEFINE_boolean('upload', True, 'upload model to comet.ml, otherwise save in temporary folder') 
@@ -130,16 +130,19 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         hydro_pos_test, dmo_pos_test= load_positions(test_idx, boxsize=FLAGS.boxsize)
 
         if (config['label']=='stellar_mass'):
-            stellar_mass_thresholds = np.array([9, 9.2, 9.3])
-            if FLAGS.boxsize == 100:
-                stellar_mass_thresholds *= 1.
+            stellar_mass_thresholds = np.array([9.2, 9.3, 9.4])
+            if FLAGS.boxsize == 300:
+                stellar_mass_thresholds += np.log10(1.4) 
             halo_occ, hod_cm, hod_tpcf = summary.hod_stellar_mass_summary(m200c[train_idx], m200c[test_idx],
                                                                         y_train, y_test,
                                                                         stellar_mass_thresholds,
                                                                         dmo_pos_test,
                                                                         FLAGS.boxsize)
 
-            r_c, hydro_tpcf_test = summary.hydro_stellar_mass_summary(hydro_pos_test, y_test, stellar_mass_thresholds, FLAGS.boxsize)
+            r_c, hydro_tpcf_test = summary.hydro_stellar_mass_summary(hydro_pos_test, 
+                                                                    y_test, 
+                                                                    stellar_mass_thresholds, 
+                                                                    FLAGS.boxsize)
 
         else:
             stellar_mass_thresholds = [9]

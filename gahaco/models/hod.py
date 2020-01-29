@@ -66,6 +66,10 @@ class HOD():
         return self.mean_occupation_satellites(self.halo_mass, self.logMcut, self.logM1, self.alpha)
 
     def fit_hod_centrals(self, halo_mass, mean_n_central):
+        print('halo mass')
+        print(halo_mass)
+        print('Mean N Centrals')
+        print(mean_n_central)
         popt_central, pcov_central = curve_fit(self.mean_occupation_centrals, 
                                                 halo_mass, mean_n_central,
                                                 p0 = (11.6, 0.17))
