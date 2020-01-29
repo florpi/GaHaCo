@@ -38,21 +38,21 @@ from gahaco.features.correlation import select_uncorrelated_features
 # Flags 
 # -----------------------------------------------------------------------------
 flags.DEFINE_string('model', 'lightgbm_reg', 'model to run') # name ,default, help
-flags.DEFINE_integer('boxsize', 100, 'TNG box to use: either 100 or 300') 
-flags.DEFINE_integer('np', 10, 'Number of processes to run') 
-flags.DEFINE_integer('n_splits', 2, 'Number of folds for cross-validation') 
-flags.DEFINE_boolean('upload', False, 'upload model to comet.ml, otherwise save in temporary folder') 
-flags.DEFINE_boolean('optimize_model', True, 'use comet.ml to perform hyper-param. optimization.') 
-flags.DEFINE_boolean('logging', False, 'save log files') 
-flags.DEFINE_boolean('mass_balance', False, 'balance dataset in different mass bins') 
-flags.DEFINE_boolean('figures', False, 'if final figures should be created') 
+flags.DEFINE_integer('boxsize', 300, 'TNG box to use: either 100 or 300')
+flags.DEFINE_integer('np', 3, 'Number of processes to run')
+flags.DEFINE_integer('n_splits', 3, 'Number of folds for cross-validation')
+flags.DEFINE_boolean('upload', True, 'upload model to comet.ml, otherwise save in temporary folder')
+flags.DEFINE_boolean('optimize_model', False, 'use comet.ml to perform hyper-param. optimization.')
+flags.DEFINE_boolean('logging', False, 'save log files')
+flags.DEFINE_boolean('mass_balance', False, 'balance dataset in different mass bins')
+flags.DEFINE_boolean('figures', True, 'if final figures should be created')
 FLAGS = flags.FLAGS
 
 def main(argv):
     """
     """
     opt_config_file_path = "../../models/%s/config_optimize.json" % (FLAGS.model)
-    main_config_file_path = "../../models/%s/config_%s.json" % (FLAGS.model, FLAGS.model)
+    main_config_file_path = "../../models/%s/config_%s_tng%d.json" % (FLAGS.model, FLAGS.model, FLAGS.boxsize)
     config = load_config(config_file_path=main_config_file_path, purpose="")
     config['model']['parameters']['n_jobs'] = FLAGS.np
     print(f"Using {FLAGS.np} cores to fit models")
@@ -113,6 +113,7 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             features = select_uncorrelated_features(features, 
                                                     gini_impurities=gini_importances,
                                                     experiment=experiment)
+    #features = features.drop(columns="M200_DMO")
 
     dropcol_importance,pm_importance,gini_importance,cms = ([] for i in range(4))
     hod_cms,hydro_tpcf,pred_tpcf,hod_tpcfs = ([] for i in range(4))
@@ -123,14 +124,13 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         x_train, x_test = (features.iloc[train_idx], features.iloc[test_idx])
         y_train, y_test = (labels.iloc[train_idx], labels.iloc[test_idx])
 
-
         # -----------------------------------------------------------------------------
         # BASELINE HOD MODEL EVALUATION 
         # -----------------------------------------------------------------------------
 
         hydro_pos_test, dmo_pos_test = load_positions(test_idx, boxsize=FLAGS.boxsize)
 
-       if FLAGS.optimize_model is False:
+        if FLAGS.optimize_model is False:
             if (config['label']=='stellar_mass'):
 
                 stellar_mass_thresholds = np.array([9.2, 9.3, 9.4])
