@@ -17,7 +17,7 @@ def compute_tpcf(positions: np.ndarray, boxsize: float = 100.):
     if boxsize < 150:
         r = np.geomspace(0.3, 10.0, 7)
     else:
-        r = np.geomspace(0.3, 30.0, 12)
+        r = np.geomspace(0.3, 30.0, 18)
     r_c = 0.5 * (r[1:] + r[:-1])
 
     real_tpcf = tpcf(positions, rbins=r, period=boxsize, estimator="Landy-Szalay")

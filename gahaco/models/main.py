@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from comet_ml import Experiment, OfflineExperiment, Optimizer
 
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, KBinsDiscretizer 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.metrics import (
@@ -39,7 +39,7 @@ from gahaco.features.correlation import select_uncorrelated_features
 # -----------------------------------------------------------------------------
 flags.DEFINE_string('model', 'lightgbm_reg', 'model to run') # name ,default, help
 flags.DEFINE_integer('boxsize', 300, 'TNG box to use: either 100 or 300')
-flags.DEFINE_integer('np', 3, 'Number of processes to run')
+flags.DEFINE_integer('np', 4, 'Number of processes to run')
 flags.DEFINE_integer('n_splits', 3, 'Number of folds for cross-validation')
 flags.DEFINE_boolean('upload', True, 'upload model to comet.ml, otherwise save in temporary folder')
 flags.DEFINE_boolean('optimize_model', False, 'use comet.ml to perform hyper-param. optimization.')
@@ -76,10 +76,7 @@ def main(argv):
         sampler=None
 
     # K-fold validation setting
-    if config['label']=='stellar_mass':
-        skf = KFold(n_splits=FLAGS.n_splits, shuffle=True)
-    else:
-        skf = StratifiedKFold(n_splits=FLAGS.n_splits, shuffle=True)
+    skf = StratifiedKFold(n_splits=FLAGS.n_splits, shuffle=True, random_state=0)
     
     if FLAGS.optimize_model:
         # model-/hyper-parameter optimization (run many experiments)
@@ -119,8 +116,13 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
     hod_cms,hydro_tpcf,pred_tpcf,hod_tpcfs = ([] for i in range(4))
     halo_occs = []
 
+    if config['label']=='stellar_mass':
+        stratify = KBinsDiscretizer(n_bins=20, encode="ordinal", 
+                        strategy="uniform").fit_transform(np.expand_dims(labels.values, -1)).astype(int)
+    else:
+        stratify = labels
     fold=0
-    for train_idx, test_idx in skf.split(features, labels):
+    for train_idx, test_idx in skf.split(features, stratify):
         x_train, x_test = (features.iloc[train_idx], features.iloc[test_idx])
         y_train, y_test = (labels.iloc[train_idx], labels.iloc[test_idx])
 
