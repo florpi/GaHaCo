@@ -135,7 +135,8 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         if FLAGS.optimize_model is False:
             if (config['label']=='stellar_mass'):
 
-                stellar_mass_thresholds = np.array([9.2, 9.3, 9.4])
+                #stellar_mass_thresholds = np.array([9.2, 9.3, 9.4])
+                stellar_mass_thresholds = np.array([9.1, 9.3, 9.6])
                 if FLAGS.boxsize == 300:
                     stellar_mass_thresholds += np.log10(1.4) 
 
