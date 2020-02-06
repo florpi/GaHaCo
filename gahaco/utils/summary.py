@@ -26,7 +26,7 @@ def hod_stellar_mass_summary(
         hod_tpcfs.append(compute_tpcf(dmo_pos_test[n_gals_test_hod > 0],
             boxsize=boxsize)[1])
 
-    return halo_occs, hod_cms, hod_tpcfs
+    return halo_occs, hod_cms, hod_tpcfs, n_gals_test_hod
 
 def hod_summary(m200c_train, m200c_test, n_gals_train, n_gals_test, dmo_pos_test, boxsize):
         halo_occ = hod.HOD(m200c_train, n_gals_train)

@@ -136,11 +136,11 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             if (config['label']=='stellar_mass'):
 
                 #stellar_mass_thresholds = np.array([9.2, 9.3, 9.4])
-                stellar_mass_thresholds = np.array([9.1, 9.3, 9.6])
-                if FLAGS.boxsize == 300:
-                    stellar_mass_thresholds += np.log10(1.4) 
+                stellar_mass_thresholds = np.array([9., 9.6, 9.8])
+                #if FLAGS.boxsize == 300:
+                #stellar_mass_thresholds += np.log10(1.4) 
 
-                halo_occ, hod_cm, hod_tpcf = summary.hod_stellar_mass_summary(
+                halo_occ, hod_cm, hod_tpcf, y_pred_hod = summary.hod_stellar_mass_summary(
                     m200c[train_idx], m200c[test_idx],
                     y_train,
                     y_test,
@@ -192,6 +192,7 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         ## Standarize features
         scaler = StandardScaler()
         scaler.fit(x_train)
+        x_test_save = x_test.copy()
         x_train_scaled = scaler.transform(x_train)
         x_train = pd.DataFrame(x_train_scaled, index=x_train.index, columns=x_train.columns)
         x_test_scaled = scaler.transform(x_test)
@@ -203,6 +204,12 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
 
         trained_model = model.fit(x_train, y_train, config["model"])
         y_pred = model.predict(trained_model, x_test, config["model"])
+
+        x_test_save['prediction'] = y_pred
+        x_test_save['label'] = y_test 
+        x_test_save['hod'] = y_pred_hod
+        x_test_save.to_hdf(f'../../models/{FLAGS.model}/test_results_fold{fold}_env',
+                key='hf')
 
         metric_value = metric(y_test, y_pred, **config["metric"]["params"])
         experiment.log_metric("Metric value", metric_value)

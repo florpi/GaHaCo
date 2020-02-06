@@ -29,7 +29,8 @@ def get_data(arg_label:str,
             "Group_R_Crit200", "CentralVmax", #"m2500c",
             "vrms_2500c", "vrms_200c", "vrms_std_2500c",
             "CentralMassInMaxRad",
-            "displacement"
+            "displacement",
+            #"env_5", "env_10",
             ]
     # Chose label
     if arg_label == "dark_or_light":
@@ -46,13 +47,12 @@ def get_data(arg_label:str,
     elif arg_label == "both":
         df["labels"] = df.N_gals > 0
 
-    keep_list = [
-        "Formation Time", "CentralVelDisp", "M200_DMO", "labels", 
-        "env_10",
-        "m2500c"
-    ]
+    #keep_list = [
+    #    "Formation Time", "CentralVelDisp", "M200_DMO", "labels", "CentralMass",
+    #    "env_10"
+    #]
 
-    df = df[keep_list]
+    #df = df[keep_list]
 
     return df.drop(columns="labels"), df.labels
 

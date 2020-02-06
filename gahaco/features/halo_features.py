@@ -113,7 +113,6 @@ class Catalog:
             env_per_halo: array of len number of halos, with the measure of environemnt 
 
         '''
-
         # Load subhalos
         r_outer = 1000. * r_outer # to kpc/h
         subhalo_pos = self.snapshot.cat['SubhaloPos'][:]
@@ -129,7 +128,8 @@ class Catalog:
             env_per_halo[halo] = np.sum(subhalo_mass[outer_ids[halo]]) - np.sum(subhalo_mass[inner_ids])
         return env_per_halo
 
-    def Environment_haas(self, f: float, halo_idx: int):
+
+    def Environment_haas(self, f: float):
         """
 
         Measure of environment that is not correlated with host halo mass http://arxiv.org/abs/1103.0547.
@@ -139,27 +139,29 @@ class Catalog:
             f: threshold to select minimum mass of neighbor to consider.
 
         """
+        haas_env = np.zeros((len(self.Group_M_Crit200)))
+        tree = cKDTree(self.GroupPos)
+        for halo_id in range(len(self.GroupPos)):
+            min_mass = self.Group_M_Crit200[halo_id]
+            try:
+                distance, id_neigh = tree.query(self.GroupPos[halo_id,:], k = 1000)
+                threshold = np.where(self.Group_M_Crit200[id_neigh] > min_mass)[0]
+                distance = distance[threshold][0]
+                id_neigh = id_neigh[threshold][0]
+                haas_env[halo_id] = distance/self.Group_R_Crit200[halo_id]
 
-        #haas_env = np.zeros(self.N_halos)
+            except:
+                if self.Group_M_Crit200[halo_id] == np.max(self.Group_M_Crit200):
+                    haas_env[halo_id] = self.boxsize
+                else:
+                    threshold = np.where(self.Group_M_Crit200 > min_mass)[0]
+                    r200_above_min = self.Group_R_Crit200[threshold]
+                    difference = self.GroupPos[threshold,:] - self.GroupPos[halo_id, :]
+                    distances = np.linalg.norm(difference, axis=-1)
+                    id_neigh = np.argsort(distances)[0]
 
-        #for i in range(self.N_halos):
-        halopos_exclude = np.delete(self.GroupPos, halo_idx, axis=0)
-        m200c_exclude = np.delete(self.Group_M_Crit200, halo_idx)
+                    haas_env[halo_id] = distances[id_neigh]/r200_above_min[id_neigh]
 
-        halopos_neighbors = halopos_exclude[(m200c_exclude >= f * self.Group_M_Crit200[halo_idx])]
-        if halopos_neighbors.shape[0] == 0:
-            return -1.
-            #haas_env[i] = -1.0
-        index_closest = self.closest_node(self.GroupPos[halo_idx], halopos_neighbors)
-        distance_fneigh = np.linalg.norm(
-            self.GroupPos[halo_idx] - halopos_neighbors[index_closest]
-        )
-
-        r200c_exclude = np.delete(self.Group_R_Crit200, halo_idx)
-        r200c_neighbor = r200c_exclude[(m200c_exclude >= f * self.Group_M_Crit200[halo_idx])][
-            index_closest
-        ]
-        haas_env = distance_fneigh / r200c_neighbor
         return haas_env
 
 
@@ -448,7 +450,7 @@ class GalaxyCatalog(Catalog):
 
 
 if __name__ == "__main__":
-    tng = 100
+    tng = 300
     parser = argparse.ArgumentParser(description='Execute in N cores')
     parser.add_argument('--np', dest='n_cpu', type=int, help='number of available cpus')
     args = parser.parse_args()
@@ -456,18 +458,21 @@ if __name__ == "__main__":
 
     halocat = HaloCatalog(tng= tng)
 
-    env_5 = halocat.Environment_subhalos(5)
-    halocat.env_5 = np.log10(env_5)
+    haas_1 = halocat.Environment_haas(1.)
+    halocat.haas_1 = haas_1
+    env_2 = halocat.Environment_subhalos(2)
+    halocat.env_2 = np.log10(env_2)
     env_10 = halocat.Environment_subhalos(10)
     halocat.env_10 = np.log10(env_10)
-
     features_to_save = ['ID_DMO','N_subhalos', 'Group_M_Crit200', 'Group_R_Crit200',
             'CentralVelDisp', 'CentralVmax', 'Spin', 'fsub_unbound', 'x_offset' , 'GroupPos',
             "CentralHalfmassRad","CentralMassInMaxRad","CentralMass",
-            'env_5', 'env_10']
+            'env_2', 'env_10', 'haas_1']
     halocat.save_features(f'TNG{tng}dark_subfind.hdf5', features_to_save)
 
+    '''
     galcat = GalaxyCatalog(tng=tng)
     features_to_save = ['ID_HYDRO','N_gals', 'M_stars_central', 'total_M_stars', 'Group_M_Crit200', 'GroupPos']
     galcat.save_features(f'TNG{tng}hydro_subfind.hdf5', features_to_save)
     np.save(galcat.output_dir + 'galaxy_positions', galcat.pos_gals)
+    '''
