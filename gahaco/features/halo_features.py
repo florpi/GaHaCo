@@ -460,14 +460,14 @@ if __name__ == "__main__":
 
     haas_1 = halocat.Environment_haas(1.)
     halocat.haas_1 = haas_1
-    env_2 = halocat.Environment_subhalos(2)
-    halocat.env_2 = np.log10(env_2)
+    env_5 = halocat.Environment_subhalos(5)
+    halocat.env_5 = np.log10(env_5)
     env_10 = halocat.Environment_subhalos(10)
     halocat.env_10 = np.log10(env_10)
     features_to_save = ['ID_DMO','N_subhalos', 'Group_M_Crit200', 'Group_R_Crit200',
             'CentralVelDisp', 'CentralVmax', 'Spin', 'fsub_unbound', 'x_offset' , 'GroupPos',
             "CentralHalfmassRad","CentralMassInMaxRad","CentralMass",
-            'env_2', 'env_10', 'haas_1']
+            'env_5', 'env_10', 'haas_1']
     halocat.save_features(f'TNG{tng}dark_subfind.hdf5', features_to_save)
 
     '''

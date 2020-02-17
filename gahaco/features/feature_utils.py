@@ -26,7 +26,7 @@ def get_data(arg_label:str,
             "x_hydro", "y_hydro", "z_hydro", 
             "x_dmo", "y_dmo", "z_dmo",
             "M200_HYDRO", "ID_HYDRO", "ID_DMO",
-            "Group_R_Crit200", "CentralVmax", #"m2500c",
+            "Group_R_Crit200", #"CentralVmax", #"m2500c",
             "vrms_2500c", "vrms_200c", "vrms_std_2500c",
             "CentralMassInMaxRad",
             "displacement",
@@ -47,12 +47,14 @@ def get_data(arg_label:str,
     elif arg_label == "both":
         df["labels"] = df.N_gals > 0
 
-    #keep_list = [
-    #    "Formation Time", "CentralVelDisp", "M200_DMO", "labels", "CentralMass",
-    #    "env_10"
-    #]
+    '''
+    keep_list = [
+        "Formation Time", "CentralVmax", "CentralHalfmassRad", "concentration_prada", "Spin",
+        "env_10", "labels",
+    ]
 
-    #df = df[keep_list]
+    df = df[keep_list]
+    '''
 
     return df.drop(columns="labels"), df.labels
 

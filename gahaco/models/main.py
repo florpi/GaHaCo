@@ -40,7 +40,7 @@ from gahaco.features.correlation import select_uncorrelated_features
 flags.DEFINE_string('model', 'lightgbm_reg', 'model to run') # name ,default, help
 flags.DEFINE_integer('boxsize', 300, 'TNG box to use: either 100 or 300')
 flags.DEFINE_integer('np', 4, 'Number of processes to run')
-flags.DEFINE_integer('n_splits', 3, 'Number of folds for cross-validation')
+flags.DEFINE_integer('n_splits', 4, 'Number of folds for cross-validation')
 flags.DEFINE_boolean('upload', True, 'upload model to comet.ml, otherwise save in temporary folder')
 flags.DEFINE_boolean('optimize_model', False, 'use comet.ml to perform hyper-param. optimization.')
 flags.DEFINE_boolean('logging', False, 'save log files')
@@ -62,7 +62,13 @@ def main(argv):
 
     # Load dataset
     features, labels = get_data(config["label"], boxsize=FLAGS.boxsize)
+    print(features.columns)
     m200c = features.M200_DMO.values
+
+    keep_list = [
+        "Formation Time", "CentralVmax", "CentralHalfmassRad", "env_5", 
+    ]
+    features = features[keep_list]
     
     # Set metric
     metric_module = importlib.import_module(config["metric"]["module"])
@@ -108,7 +114,8 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             print(glob.glob("../../models/lightgbm_reg/gini_importances.csv"))
             gini_importances = np.loadtxt(f'../../models/{FLAGS.model}/gini_importances.csv')
             features = select_uncorrelated_features(features, 
-                                                    gini_impurities=gini_importances,
+                                                    labels,
+                                                    #gini_impurities=gini_importances,
                                                     experiment=experiment)
     #features = features.drop(columns="M200_DMO")
 
