@@ -62,11 +62,10 @@ def main(argv):
 
     # Load dataset
     features, labels = get_data(config["label"], boxsize=FLAGS.boxsize)
-    print(features.columns)
     m200c = features.M200_DMO.values
 
     keep_list = [
-        "Formation Time", "CentralVmax", "CentralHalfmassRad", "env_5", 
+        "concentration_prada", "CentralVmax",  "Spin", #"env_5", 
     ]
     features = features[keep_list]
     
@@ -117,7 +116,6 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                                                     labels,
                                                     #gini_impurities=gini_importances,
                                                     experiment=experiment)
-    #features = features.drop(columns="M200_DMO")
 
     dropcol_importance,pm_importance,gini_importance,cms = ([] for i in range(4))
     hod_cms,hydro_tpcf,pred_tpcf,hod_tpcfs = ([] for i in range(4))
@@ -229,7 +227,8 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             threshold = (y_test > 0.) & (y_pred > 0.)
             r2 = r2_score(y_test[threshold], y_pred[threshold])
             visualize.regression(
-                y_test[threshold], y_pred[threshold], r2, metric_value, fold=fold, experiment=experiment
+                y_test[threshold], y_pred[threshold], r2, metric_value, stellar_mass_thresholds,
+                fold=fold, experiment=experiment
             )
         if FLAGS.optimize_model is False:
             if config['feature_optimization']['measure_importance']:

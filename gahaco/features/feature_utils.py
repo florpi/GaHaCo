@@ -30,7 +30,7 @@ def get_data(arg_label:str,
             "vrms_2500c", "vrms_200c", "vrms_std_2500c",
             "CentralMassInMaxRad",
             "displacement",
-            #"env_5", "env_10",
+            'vrms_std_200c', 'beta2500c'
             ]
     # Chose label
     if arg_label == "dark_or_light":
