@@ -8,7 +8,7 @@ from gahaco.visualization.visualize import rename_features
 
 def select_uncorrelated_features(features_df, labels,
                                 gini_impurities=None,
-                                method='average', distance_cutoff=0.2,
+                                method='average', distance_cutoff=0.3,
                                 experiment=None):
     '''
     Clusters the Spearman rank-roder correlation of the different features, we keep only a single feature per cluster,  

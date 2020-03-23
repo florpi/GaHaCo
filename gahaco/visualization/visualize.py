@@ -9,7 +9,9 @@ from sklearn.metrics import r2_score, mean_squared_error, confusion_matrix
 from scipy.stats import binned_statistic
 import matplotlib 
 
-sns.set_context('talk', font_scale=1.2)
+from sklearn.metrics import mean_squared_error
+
+sns.set_context('paper')#, font_scale=1.2)
 FIGS_DIR = '/cosma/home/dp004/dc-cues1/GaHaCo/reports/figures/'
 
 #matplotlib.rc('xtick', labelsize=16) 
@@ -225,13 +227,16 @@ def plot_tpcfs(
         gridspec_kw={"height_ratios": height_ratios},
         figsize=(8, 12),
     )
-    axes[0].spines['top'].set_visible(False)
-    axes[0].spines['right'].set_visible(False)
+    #axes[0].spines['top'].set_visible(False)
+    #axes[0].spines['right'].set_visible(False)
 
     tng_color = 'black'
     hod_color = 'midnightblue'
     ml_color = 'indianred'
+    mean_hod_mse_xi, mean_pred_mse_xi = [], []
     for i, hdyro_mass in enumerate(hydro_std_folds):
+        print('**************************************************************')
+        print(f'MSE for threshold {i}')
         axes[0].errorbar(
             r_c,
             r_c ** 2 * (hydro_mean_folds[i]) + i * 50,
@@ -250,6 +255,7 @@ def plot_tpcfs(
             #yerr=r_c ** 2 * hod_std_folds[i],
             linestyle="dashed",
         )
+        mean_hod_mse_xi.append(mean_squared_error(r_c**2*hydro_mean_folds[i], r_c**2*hod_mean_folds[i]))
         axes[0].fill_between(
                 r_c,
                 r_c ** 2 * (hod_mean_folds[i]) + i * 50 - r_c ** 2 * hod_std_folds[i],
@@ -274,16 +280,20 @@ def plot_tpcfs(
                     alpha=0.3,
                     color = ml_color
                     )
+            mean_pred_mse_xi.append(mean_squared_error(r_c**2*hydro_mean_folds[i], r_c**2*pred_mean_folds[i]))
+
         axes[0].set_ylabel(r"$r^2{\xi}(r)$")
         axes[0].annotate(
-            f"$M_\star > $ {10**stellar_mass_thresholds[i]:.1E}",
+            f"$\log(M_\star) > {stellar_mass_thresholds[i]} \\ [h^{{-1}}M_\odot]$",
             (15, 20 + i * 50),
             color='black',
         )
         if i == 0:
-            axes[0].legend(#loc='upper left',
+            axes[0].legend(
+                    loc='upper left',
                     frameon=False,
-                    bbox_to_anchor=(0.35,1.2))
+                    #bbox_to_anchor=(0.35,1.2))
+                    )
 
         axes[i + 1].axhline(y=0.0, color="gray", linestyle="dashed")
         axes[i + 1].axhline(y=-1.0, color="gray", linestyle="dashed")
@@ -325,6 +335,11 @@ def plot_tpcfs(
     )
 
         axes[-1].set_xlabel(r"$r$ [Mpc/h]" )
+
+    if pred_tpcfs:
+    
+        np.save('/cosma6/data/dp004/dc-cues1/gahaco_data/mse_xi_hod.npy', mean_hod_mse_xi)
+        np.save('/cosma6/data/dp004/dc-cues1/gahaco_data/mse_xi_pred.npy', mean_pred_mse_xi)
 
     if experiment is not None:
         experiment.log_figure(figure_name="2PCF", figure=fig)
@@ -532,7 +547,7 @@ def regression(y_label, y_pred, r2score, mse, stellar_mass_threshold,fold=0, exp
         h.ax_joint.plot([threshold,threshold],[8,threshold],
                 color='red', linestyle='dashed', alpha=0.3)
 
-        h.ax_joint.text(7.2, threshold+(-1)**i*0.15, f"$\log(M_\star) > {threshold}$",
+        h.ax_joint.text(7.2, threshold+(-1)**i*0.15, f"$\log(M_\star) > {threshold} \\ [h^{{-1}}M_\odot]$",
                 color='red', alpha=0.5)
     '''
     x0, x1 = h.ax_joint.get_xlim()

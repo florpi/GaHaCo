@@ -41,7 +41,7 @@ flags.DEFINE_string('model', 'lightgbm_reg', 'model to run') # name ,default, he
 flags.DEFINE_integer('boxsize', 300, 'TNG box to use: either 100 or 300')
 flags.DEFINE_integer('np', 4, 'Number of processes to run')
 flags.DEFINE_integer('n_splits', 4, 'Number of folds for cross-validation')
-flags.DEFINE_boolean('upload', True, 'upload model to comet.ml, otherwise save in temporary folder')
+flags.DEFINE_boolean('upload', False, 'upload model to comet.ml, otherwise save in temporary folder')
 flags.DEFINE_boolean('optimize_model', False, 'use comet.ml to perform hyper-param. optimization.')
 flags.DEFINE_boolean('logging', False, 'save log files')
 flags.DEFINE_boolean('mass_balance', False, 'balance dataset in different mass bins')
@@ -64,10 +64,10 @@ def main(argv):
     features, labels = get_data(config["label"], boxsize=FLAGS.boxsize)
     m200c = features.M200_DMO.values
 
-    keep_list = [
-        "concentration_prada", "CentralVmax",  "Spin", #"env_5", 
-    ]
-    features = features[keep_list]
+    #keep_list = [
+    #    "concentration_prada", "CentralVmax",  "Spin", #"env_5", 
+    #]
+    #features = features[keep_list]
     
     # Set metric
     metric_module = importlib.import_module(config["metric"]["module"])
@@ -116,7 +116,7 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                                                     #gini_impurities=gini_importances,
                                                     experiment=experiment)
 
-    dropcol_importance,pm_importance,gini_importance,cms = ([] for i in range(4))
+    dropcol_importance,pm_importance,gini_importance,cms, chisquare_tpcf = ([] for i in range(5))
     hod_cms,hydro_tpcf,pred_tpcf,hod_tpcfs = ([] for i in range(4))
     halo_occs = []
 
@@ -231,17 +231,23 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             )
         if FLAGS.optimize_model is False:
             if config['feature_optimization']['measure_importance']:
-                imp = feature_importance.dropcol(
+                imp, xi2 = feature_importance.dropcol(
                     trained_model,
                     x_train,
                     y_train,
                     x_test,
                     y_test,
+                    dmo_pos_test,
+                    r_c,
+                    hydro_tpcf_test,
                     metric_value,
                     metric,
-                    config['metric']['params']
+                    config['metric']['params'],
+                    stellar_mass_thresholds,
+                    boxsize = FLAGS.boxsize
                 )
                 dropcol_importance.append(imp)
+                chisquare_tpcf.append(xi2)
                 imp = feature_importance.permutation(
                     trained_model, 
                     x_test,
@@ -329,6 +335,10 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 )
         experiment.add_tag(f'classifier = {FLAGS.model}')
 
+    np.save('/cosma6/data/dp004/dc-cues1/gahaco_data/dropcol.npy', dropcol_importance)
+    np.save('/cosma6/data/dp004/dc-cues1/gahaco_data/chisquare.npy', chisquare_tpcf)
+    print(features.columns.values)
+    np.save('/cosma6/data/dp004/dc-cues1/gahaco_data/names.npy', features.columns.values)
     print('All good :)')
 
 if __name__ == "__main__":
