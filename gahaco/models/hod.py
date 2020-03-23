@@ -7,15 +7,14 @@ from scipy.optimize import curve_fit
 
 class HOD():
 
-    def __init__(self, log_m200c, N_gals, satellites=False):
+    def __init__(self, m200c, N_gals, satellites=False):
 
-        #self.m200c = 10**log_m200c
-        self.m200c = log_m200c
+        self.m200c = m200c
         if satellites:
             n_centrals = N_gals > 0 
         else:
             n_centrals = N_gals
-        nbins = 20
+        nbins = 20 
         mass_bins = np.logspace(np.log10(np.min(self.m200c)), np.log10(np.max(self.m200c)), 
                 nbins + 1)
         self.mass_c = 0.5 * (mass_bins[1:] + mass_bins[:-1])
@@ -66,6 +65,7 @@ class HOD():
         return self.mean_occupation_satellites(self.halo_mass, self.logMcut, self.logM1, self.alpha)
 
     def fit_hod_centrals(self, halo_mass, mean_n_central):
+        mean_n_central[np.isnan(mean_n_central)] = 1
         popt_central, pcov_central = curve_fit(self.mean_occupation_centrals, 
                                                 halo_mass, mean_n_central,
                                                 p0 = (11.6, 0.17))

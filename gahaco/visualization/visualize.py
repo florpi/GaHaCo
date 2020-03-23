@@ -7,27 +7,37 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils.multiclass import unique_labels
 from sklearn.metrics import r2_score, mean_squared_error, confusion_matrix
 from scipy.stats import binned_statistic
+import matplotlib 
 
+from sklearn.metrics import mean_squared_error
+
+sns.set_context('paper')#, font_scale=1.2)
+FIGS_DIR = '/cosma/home/dp004/dc-cues1/GaHaCo/reports/figures/'
+
+#matplotlib.rc('xtick', labelsize=16) 
+#matplotlib.rc('ytick', labelsize=16) 
+#matplotlib.rcParams.update({'font.size': 16})
 
 def rename_features(feature_names):
     RENAME_DICT = {
         "M200c": r"$M_{200c}$",
         "R200c": r"$R_{200c}$",
         "VelDisp": r"$\sigma_v$",
-        "concentration_prada": r"$c_{prada}$",
+        "concentration_prada": r"concentration",
         "Rhosnfw": r"$\rho_{NFW}$",
         "env_5": r"$\Delta M_5$",
         "chisq_nfw": r"$\chi^2_{NFW}$",
         "vpeak": r"$V_{peak}$",
         "rho_s": r"$\rho_s$",
-        "HalfmassRad": r"$r_{1/2}$",
+        "CentralHalfmassRad": r"$r_{1/2}$",
         "N_subhalos": r"Nsubhalos",
         "env_10": r"$\Delta M_{10}$",
         "concentration_nfw": r"$c_{NFW}$",
-        "vel_ani_param": r"$\beta_v$",
-        "fsub_unbound": "unbound fraction",
-        "Vmax": r"$V_{max}$",
+        "beta200c": r"$\beta_v$",
+        "fsub_unbound": "Non-central mass",
+        "CentralVmax": r"$V_{max}$",
         "Rmax": r"$R_{max}$",
+        "x_offset": "CoM offset",
     }
 
     feature_names = [RENAME_DICT.get(c, c) for c in feature_names]
@@ -58,7 +68,7 @@ def plot_confusion_matrix(
     for k, cm_mass_threshold in enumerate(cm):
         fig, ax = plt.subplots()
         im = ax.imshow(cm_mass_threshold, interpolation="nearest", cmap=cmap)
-        ax.figure.colorbar(im, ax=ax)
+        #ax.figure.colorbar(im, ax=ax)
         ## We want to show all ticks...
         ax.set(
             xticks=np.arange(cm_mass_threshold.shape[1]),
@@ -82,7 +92,7 @@ def plot_confusion_matrix(
                 ax.text(
                     j,
                     i,
-                    f"${cm_mass_threshold[i,j]:.2f} \pm {std_cm[k,i,j]:.2E}$",
+                    f"{cm_mass_threshold[i,j]:.2f}",# \pm {std_cm[k,i,j]:.2E}$",
                     # format(cm_mass_threshold[i, j], fmt),
                     ha="center",
                     va="center",
@@ -91,6 +101,10 @@ def plot_confusion_matrix(
         fig.tight_layout()
         if experiment is not None:
             experiment.log_figure(figure_name="Confusion Matrix", figure=fig)
+            plt.savefig(FIGS_DIR + 'confusion_matrix.png', 
+                    dpi=250,
+                    bbox_inches='tight')
+
 
 
 def plot_feature_importance(
@@ -118,6 +132,12 @@ def plot_feature_importance(
     plt.tight_layout()
     if experiment is not None:
         experiment.log_figure(figure_name="Dropcol Feature importance", figure=fig)
+        plt.savefig(FIGS_DIR + 'feature_importance.png', 
+                    dpi=250,
+                    bbox_inches='tight')
+
+
+
     else:
         return fig
 
@@ -207,11 +227,16 @@ def plot_tpcfs(
         gridspec_kw={"height_ratios": height_ratios},
         figsize=(8, 12),
     )
+    #axes[0].spines['top'].set_visible(False)
+    #axes[0].spines['right'].set_visible(False)
 
     tng_color = 'black'
     hod_color = 'midnightblue'
     ml_color = 'indianred'
+    mean_hod_mse_xi, mean_pred_mse_xi = [], []
     for i, hdyro_mass in enumerate(hydro_std_folds):
+        print('**************************************************************')
+        print(f'MSE for threshold {i}')
         axes[0].errorbar(
             r_c,
             r_c ** 2 * (hydro_mean_folds[i]) + i * 50,
@@ -222,6 +247,24 @@ def plot_tpcfs(
             marker="o",
             markersize=2,
         )
+        axes[0].plot(
+            r_c,
+            r_c ** 2 * (hod_mean_folds[i]) + i * 50,
+            label=f"HOD",
+            color=hod_color,
+            #yerr=r_c ** 2 * hod_std_folds[i],
+            linestyle="dashed",
+        )
+        mean_hod_mse_xi.append(mean_squared_error(r_c**2*hydro_mean_folds[i], r_c**2*hod_mean_folds[i]))
+        axes[0].fill_between(
+                r_c,
+                r_c ** 2 * (hod_mean_folds[i]) + i * 50 - r_c ** 2 * hod_std_folds[i],
+                r_c ** 2 * (hod_mean_folds[i]) + i * 50 + r_c ** 2 * hod_std_folds[i],
+                alpha=0.3,
+                color = hod_color
+                )
+
+
         if pred_tpcfs is not None:
             axes[0].plot(
                 r_c,
@@ -237,41 +280,36 @@ def plot_tpcfs(
                     alpha=0.3,
                     color = ml_color
                     )
-        axes[0].plot(
-            r_c,
-            r_c ** 2 * (hod_mean_folds[i]) + i * 50,
-            label=f"HOD",
-            color=hod_color,
-            #yerr=r_c ** 2 * hod_std_folds[i],
-            linestyle="dashed",
-        )
-        axes[0].fill_between(
-                r_c,
-                r_c ** 2 * (hod_mean_folds[i]) + i * 50 - r_c ** 2 * hod_std_folds[i],
-                r_c ** 2 * (hod_mean_folds[i]) + i * 50 + r_c ** 2 * hod_std_folds[i],
-                alpha=0.3,
-                color = hod_color
-                )
+            mean_pred_mse_xi.append(mean_squared_error(r_c**2*hydro_mean_folds[i], r_c**2*pred_mean_folds[i]))
 
         axes[0].set_ylabel(r"$r^2{\xi}(r)$")
-
         axes[0].annotate(
-            f"$M_\star > $ {10**stellar_mass_thresholds[i]:.1E}",
+            f"$\log(M_\star) > {stellar_mass_thresholds[i]} \\ [h^{{-1}}M_\odot]$",
             (15, 20 + i * 50),
             color='black',
         )
+        if i == 0:
+            axes[0].legend(
+                    loc='upper left',
+                    frameon=False,
+                    #bbox_to_anchor=(0.35,1.2))
+                    )
 
         axes[i + 1].axhline(y=0.0, color="gray", linestyle="dashed")
         axes[i + 1].axhline(y=-1.0, color="gray", linestyle="dashed")
         axes[i + 1].axhline(y=1.0, color="gray", linestyle="dashed")
+        axes[i + 1].set_ylim(-5, 5)
+        axes[i + 1].set_ylabel(r"$\hat{\xi}/\xi_{sim}$")
+
+
 
         if pred_tpcfs is not None:
-            axes[i + 1].plot(
+            axes[hydro_mean_folds.shape[0] -i].plot(
                 r_c,
                 (pred_mean_folds[i] - hydro_mean_folds[i]) / hydro_std_folds[i],
                 color=ml_color,
             )
-            axes[i + 1].fill_between(
+            axes[hydro_mean_folds.shape[0] -i].fill_between(
                 r_c,
                 (pred_mean_folds[i] - pred_std_folds[i] - hydro_mean_folds[i])
                 / hydro_std_folds[i],
@@ -280,30 +318,41 @@ def plot_tpcfs(
                 color=ml_color,
                 alpha=0.3,
             )
-        axes[i + 1].plot(
-            r_c,
-            (hod_mean_folds[i] - hydro_mean_folds[i]) / hydro_std_folds[i],
-            color=hod_color,
-            linestyle="dashed",
-        )
-        axes[i + 1].fill_between(
-            r_c,
-            (hod_mean_folds[i] - hod_std_folds[i] - hydro_mean_folds[i])
-            / hydro_std_folds[i],
-            (hod_mean_folds[i] + hod_std_folds[i] - hydro_mean_folds[i])
-            / hydro_std_folds[i],
-            color=hod_color,
-            alpha=0.3,
-        )
+        axes[hydro_mean_folds.shape[0] -i].plot(
+        r_c,
+        (hod_mean_folds[i] - hydro_mean_folds[i]) / hydro_std_folds[i],
+        color=hod_color,
+        linestyle="dashed",
+    )
+        axes[hydro_mean_folds.shape[0] -i].fill_between(
+        r_c,
+        (hod_mean_folds[i] - hod_std_folds[i] - hydro_mean_folds[i])
+        / hydro_std_folds[i],
+        (hod_mean_folds[i] + hod_std_folds[i] - hydro_mean_folds[i])
+        / hydro_std_folds[i],
+        color=hod_color,
+        alpha=0.3,
+    )
 
-        axes[i + 1].set_ylim(-5, 5)
-        axes[i + 1].set_ylabel(r"$\hat{\xi}/\xi_{sim}$")
+        axes[-1].set_xlabel(r"$r$ [Mpc/h]" )
 
-    axes[-1].set_xlabel(r"$r$ [Mpc/h]")
-    # axes[0].legend()
+    if pred_tpcfs:
+    
+        np.save('/cosma6/data/dp004/dc-cues1/gahaco_data/mse_xi_hod.npy', mean_hod_mse_xi)
+        np.save('/cosma6/data/dp004/dc-cues1/gahaco_data/mse_xi_pred.npy', mean_pred_mse_xi)
 
     if experiment is not None:
         experiment.log_figure(figure_name="2PCF", figure=fig)
+        if pred_tpcfs is not None:
+            plt.savefig(FIGS_DIR + 'tpcf.png',
+                    dpi = 250,
+                    bbox_inches='tight',
+                    )
+        else:
+            plt.savefig(FIGS_DIR + 'hod_tpcf.png', 
+                    dpi=250,
+                    bbox_inches='tight',
+                    )
 
 
 def plot_power_spectrum(
@@ -482,17 +531,25 @@ def regression_metrics(y_label, y_pred):
     return (mean_squared_error(y_label, y_pred), r2_score(y_label, y_pred))
 
 
-def regression(y_label, y_pred, r2score, mse, fold=0, experiment=None):
+def regression(y_label, y_pred, r2score, mse, stellar_mass_threshold,fold=0, experiment=None):
 
     h = sns.jointplot(x=y_label, y=y_pred, kind="hex")
     h.set_axis_labels(
-        "$log(M_{*, target}) \,\, [M_\odot]$",
-        "$log(M_{*, pred}) \,\, [M_\odot]$",
-        fontsize=16,
+        "$\log(M_{*}) \,\, [M_\odot]$",
+        "$\log(\hat{M}_*) \,\, [M_\odot]$",
     )
-    h.ax_joint.text(8, 12, f"$R^2 = {r2score:.2f}$ ", fontsize=13)
-    h.ax_joint.text(8, 11.5, f"MSE$ = {mse:.3f}$ ", fontsize=13)
+    h.ax_joint.text(8, 12, f"$R^2 = {r2score:.2f}$ ")
+    h.ax_joint.text(8, 11.5, f"MSE$ = {mse:.3f}$ ")
+    '''
+    for i, threshold in enumerate(stellar_mass_threshold):
+        h.ax_joint.plot([7,threshold],[threshold,threshold],
+                color='red', linestyle='dashed', alpha=0.3)
+        h.ax_joint.plot([threshold,threshold],[8,threshold],
+                color='red', linestyle='dashed', alpha=0.3)
 
+        h.ax_joint.text(7.2, threshold+(-1)**i*0.15, f"$\log(M_\star) > {threshold} \\ [h^{{-1}}M_\odot]$",
+                color='red', alpha=0.5)
+    '''
     x0, x1 = h.ax_joint.get_xlim()
     y0, y1 = h.ax_joint.get_ylim()
     lims = [max(x0, y0), min(x1, y1)]
@@ -502,6 +559,11 @@ def regression(y_label, y_pred, r2score, mse, fold=0, experiment=None):
     h.fig.tight_layout()
     if experiment is not None:
         experiment.log_figure(figure_name="Regression", figure=h.fig)
+        plt.savefig(FIGS_DIR + 'regression.png', 
+                dpi=250,
+                bbox_inches='tight',
+                )
+
     else:
         return h
 

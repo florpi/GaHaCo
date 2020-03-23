@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from comet_ml import Experiment, OfflineExperiment, Optimizer
 
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, KBinsDiscretizer 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.metrics import (
@@ -38,21 +38,21 @@ from gahaco.features.correlation import select_uncorrelated_features
 # Flags 
 # -----------------------------------------------------------------------------
 flags.DEFINE_string('model', 'lightgbm_reg', 'model to run') # name ,default, help
-flags.DEFINE_integer('boxsize', 100, 'TNG box to use: either 100 or 300') 
-flags.DEFINE_integer('np', 10, 'Number of processes to run') 
-flags.DEFINE_integer('n_splits', 2, 'Number of folds for cross-validation') 
-flags.DEFINE_boolean('upload', False, 'upload model to comet.ml, otherwise save in temporary folder') 
-flags.DEFINE_boolean('optimize_model', True, 'use comet.ml to perform hyper-param. optimization.') 
-flags.DEFINE_boolean('logging', False, 'save log files') 
-flags.DEFINE_boolean('mass_balance', False, 'balance dataset in different mass bins') 
-flags.DEFINE_boolean('figures', False, 'if final figures should be created') 
+flags.DEFINE_integer('boxsize', 300, 'TNG box to use: either 100 or 300')
+flags.DEFINE_integer('np', 4, 'Number of processes to run')
+flags.DEFINE_integer('n_splits', 4, 'Number of folds for cross-validation')
+flags.DEFINE_boolean('upload', False, 'upload model to comet.ml, otherwise save in temporary folder')
+flags.DEFINE_boolean('optimize_model', False, 'use comet.ml to perform hyper-param. optimization.')
+flags.DEFINE_boolean('logging', False, 'save log files')
+flags.DEFINE_boolean('mass_balance', False, 'balance dataset in different mass bins')
+flags.DEFINE_boolean('figures', True, 'if final figures should be created')
 FLAGS = flags.FLAGS
 
 def main(argv):
     """
     """
     opt_config_file_path = "../../models/%s/config_optimize.json" % (FLAGS.model)
-    main_config_file_path = "../../models/%s/config_%s.json" % (FLAGS.model, FLAGS.model)
+    main_config_file_path = "../../models/%s/config_%s_tng%d.json" % (FLAGS.model, FLAGS.model, FLAGS.boxsize)
     config = load_config(config_file_path=main_config_file_path, purpose="")
     config['model']['parameters']['n_jobs'] = FLAGS.np
     print(f"Using {FLAGS.np} cores to fit models")
@@ -63,6 +63,11 @@ def main(argv):
     # Load dataset
     features, labels = get_data(config["label"], boxsize=FLAGS.boxsize)
     m200c = features.M200_DMO.values
+
+    #keep_list = [
+    #    "concentration_prada", "CentralVmax",  "Spin", #"env_5", 
+    #]
+    #features = features[keep_list]
     
     # Set metric
     metric_module = importlib.import_module(config["metric"]["module"])
@@ -76,10 +81,7 @@ def main(argv):
         sampler=None
 
     # K-fold validation setting
-    if config['label']=='stellar_mass':
-        skf = KFold(n_splits=FLAGS.n_splits, shuffle=True)
-    else:
-        skf = StratifiedKFold(n_splits=FLAGS.n_splits, shuffle=True)
+    skf = StratifiedKFold(n_splits=FLAGS.n_splits, shuffle=True, random_state=0)
     
     if FLAGS.optimize_model:
         # model-/hyper-parameter optimization (run many experiments)
@@ -108,21 +110,25 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
 
             feature_names = [f"PCA_{i}" for i in range(train["features"].shape[1])]
         elif config['feature_optimization']['uncorrelated']:
-            print(glob.glob("../../models/lightgbm_reg/gini_importances.csv"))
             gini_importances = np.loadtxt(f'../../models/{FLAGS.model}/gini_importances.csv')
             features = select_uncorrelated_features(features, 
-                                                    gini_impurities=gini_importances,
+                                                    labels,
+                                                    #gini_impurities=gini_importances,
                                                     experiment=experiment)
 
-    dropcol_importance,pm_importance,gini_importance,cms = ([] for i in range(4))
+    dropcol_importance,pm_importance,gini_importance,cms, chisquare_tpcf = ([] for i in range(5))
     hod_cms,hydro_tpcf,pred_tpcf,hod_tpcfs = ([] for i in range(4))
     halo_occs = []
 
+    if config['label']=='stellar_mass':
+        stratify = KBinsDiscretizer(n_bins=20, encode="ordinal", 
+                        strategy="uniform").fit_transform(np.expand_dims(labels.values, -1)).astype(int)
+    else:
+        stratify = labels
     fold=0
-    for train_idx, test_idx in skf.split(features, labels):
+    for train_idx, test_idx in skf.split(features, stratify):
         x_train, x_test = (features.iloc[train_idx], features.iloc[test_idx])
         y_train, y_test = (labels.iloc[train_idx], labels.iloc[test_idx])
-
 
         # -----------------------------------------------------------------------------
         # BASELINE HOD MODEL EVALUATION 
@@ -132,9 +138,13 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
 
         if FLAGS.optimize_model is False:
             if (config['label']=='stellar_mass'):
-                stellar_mass_thresholds = np.array([9, 9.2, 9.3])
 
-                halo_occ, hod_cm, hod_tpcf = summary.hod_stellar_mass_summary(
+                #stellar_mass_thresholds = np.array([9.2, 9.3, 9.4])
+                stellar_mass_thresholds = np.array([9., 9.6, 9.8])
+                #if FLAGS.boxsize == 300:
+                #stellar_mass_thresholds += np.log10(1.4) 
+
+                halo_occ, hod_cm, hod_tpcf, y_pred_hod = summary.hod_stellar_mass_summary(
                     m200c[train_idx], m200c[test_idx],
                     y_train,
                     y_test,
@@ -186,6 +196,7 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         ## Standarize features
         scaler = StandardScaler()
         scaler.fit(x_train)
+        x_test_save = x_test.copy()
         x_train_scaled = scaler.transform(x_train)
         x_train = pd.DataFrame(x_train_scaled, index=x_train.index, columns=x_train.columns)
         x_test_scaled = scaler.transform(x_test)
@@ -198,6 +209,12 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         trained_model = model.fit(x_train, y_train, config["model"])
         y_pred = model.predict(trained_model, x_test, config["model"])
 
+        x_test_save['prediction'] = y_pred
+        x_test_save['label'] = y_test 
+        x_test_save['hod'] = y_pred_hod
+        x_test_save.to_hdf(f'../../models/{FLAGS.model}/test_results_fold{fold}_env',
+                key='hf')
+
         metric_value = metric(y_test, y_pred, **config["metric"]["params"])
         experiment.log_metric("Metric value", metric_value)
 
@@ -209,21 +226,28 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
             threshold = (y_test > 0.) & (y_pred > 0.)
             r2 = r2_score(y_test[threshold], y_pred[threshold])
             visualize.regression(
-                y_test[threshold], y_pred[threshold], r2, metric_value, fold=fold, experiment=experiment
+                y_test[threshold], y_pred[threshold], r2, metric_value, stellar_mass_thresholds,
+                fold=fold, experiment=experiment
             )
         if FLAGS.optimize_model is False:
             if config['feature_optimization']['measure_importance']:
-                imp = feature_importance.dropcol(
+                imp, xi2 = feature_importance.dropcol(
                     trained_model,
                     x_train,
                     y_train,
                     x_test,
                     y_test,
+                    dmo_pos_test,
+                    r_c,
+                    hydro_tpcf_test,
                     metric_value,
                     metric,
-                    config['metric']['params']
+                    config['metric']['params'],
+                    stellar_mass_thresholds,
+                    boxsize = FLAGS.boxsize
                 )
                 dropcol_importance.append(imp)
+                chisquare_tpcf.append(xi2)
                 imp = feature_importance.permutation(
                     trained_model, 
                     x_test,
@@ -311,6 +335,10 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 )
         experiment.add_tag(f'classifier = {FLAGS.model}')
 
+    np.save('/cosma6/data/dp004/dc-cues1/gahaco_data/dropcol.npy', dropcol_importance)
+    np.save('/cosma6/data/dp004/dc-cues1/gahaco_data/chisquare.npy', chisquare_tpcf)
+    print(features.columns.values)
+    np.save('/cosma6/data/dp004/dc-cues1/gahaco_data/names.npy', features.columns.values)
     print('All good :)')
 
 if __name__ == "__main__":

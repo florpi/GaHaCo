@@ -14,15 +14,17 @@ def compute_tpcf(positions: np.ndarray, boxsize: float = 100.):
 
     """
 
-    r = np.geomspace(0.3, 30.0, 50)
-    #r = np.linspace(0.1, 30., 15)
+    if boxsize < 150:
+        r = np.geomspace(0.3, 10.0, 7)
+    else:
+        r = np.geomspace(0.3, 30.0, 18)
     r_c = 0.5 * (r[1:] + r[:-1])
 
     real_tpcf = tpcf(positions, rbins=r, period=boxsize, estimator="Landy-Szalay")
 
     return r_c, real_tpcf
 
-def compute_power_spectrum(positions: np.ndarray, boxsize: float = 102.6):
+def compute_power_spectrum(positions: np.ndarray, boxsize: float = 100.):
     """
     Computes the real space power spectrum using nbodykit 
 

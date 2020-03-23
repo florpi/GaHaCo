@@ -6,8 +6,9 @@ from scipy.cluster import hierarchy
 from collections import defaultdict
 from gahaco.visualization.visualize import rename_features
 
-def select_uncorrelated_features(features_df, gini_impurities=None,
-                                method='ward', distance_cutoff=0.9,
+def select_uncorrelated_features(features_df, labels,
+                                gini_impurities=None,
+                                method='average', distance_cutoff=0.3,
                                 experiment=None):
     '''
     Clusters the Spearman rank-roder correlation of the different features, we keep only a single feature per cluster,  
@@ -19,7 +20,7 @@ def select_uncorrelated_features(features_df, gini_impurities=None,
         reduced dataframe with only low correlated features
     '''
     corr = np.round(spearmanr(features_df).correlation, 4)
-    corr_condensed = hierarchy.distance.squareform(1-corr)
+    corr_condensed = hierarchy.distance.squareform(1-abs(corr))
     corr_linkage = hierarchy.linkage(corr_condensed, method=method)
     cluster_ids = hierarchy.fcluster(corr_linkage, distance_cutoff, criterion='distance')
     cluster_id_to_feature_ids = defaultdict(list)
@@ -27,7 +28,12 @@ def select_uncorrelated_features(features_df, gini_impurities=None,
         cluster_id_to_feature_ids[cluster_id].append(idx)
 
     if gini_impurities is None:
-        selected_features = [v[0] for v in cluster_id_to_feature_ids.values()]
+        corr_labels = []
+        for feature in features_df.columns:
+            corr_ = spearmanr(features_df[feature], labels).correlation
+            corr_labels.append(corr_)
+        corr_labels = np.asarray(corr_labels)
+        selected_features = [v[np.argmax(abs(corr_labels[v]))]  for v in cluster_id_to_feature_ids.values()]
     else:
         selected_features = [v[np.argmax(gini_impurities[v])] for v in cluster_id_to_feature_ids.values()]
 

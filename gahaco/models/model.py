@@ -73,7 +73,8 @@ class Model():
                 api_key="VNQSdbR1pw33EkuHbUsGUSZWr",
                 project_name="general",
                 workspace="florpi",
-                offline_directory="/cosma/home/dp004/dc-beck3/4_GaHaCo/GaHaCo/comet/",
+                #offline_directory="/cosma/home/dp004/dc-beck3/4_GaHaCo/GaHaCo/comet/",
+                offline_directory="/cosma/home/dp004/dc-cues1/GaHaCo/comet/",
             )
         self.experiment = experiment
     

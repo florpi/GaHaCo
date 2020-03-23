@@ -26,7 +26,7 @@ def hod_stellar_mass_summary(
         hod_tpcfs.append(compute_tpcf(dmo_pos_test[n_gals_test_hod > 0],
             boxsize=boxsize)[1])
 
-    return halo_occs, hod_cms, hod_tpcfs
+    return halo_occs, hod_cms, hod_tpcfs, n_gals_test_hod
 
 def hod_summary(m200c_train, m200c_test, n_gals_train, n_gals_test, dmo_pos_test, boxsize):
         halo_occ = hod.HOD(m200c_train, n_gals_train)
@@ -58,13 +58,15 @@ def model_stellar_mass_summary(stellar_mass_test,
     return cms, pred_tpcf 
 
 
-def model_summary(n_gals_test, n_gals_pred, dmo_pos_test, boxsize):
-    
-    cm = confusion_matrix(n_gals_test, n_gals_pred)
-    cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
+def model_summary(n_gals_test, n_gals_pred, dmo_pos_test, boxsize, cm=True):
     pred_tpcf = compute_tpcf(dmo_pos_test[n_gals_pred>0],
             boxsize=boxsize)[1]
-    return cm, pred_tpcf
+    if cm:
+        cm = confusion_matrix(n_gals_test, n_gals_pred)
+        cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
+        return cm, pred_tpcf
+    else:
+        return pred_tpcf
 
 def hydro_stellar_mass_summary(hydro_pos_test, stellar_mass_test, stellar_mass_thresholds, boxsize):
     hydro_tpcf = []
