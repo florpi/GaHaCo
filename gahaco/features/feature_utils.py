@@ -8,8 +8,6 @@ from scipy.interpolate import interp1d
 
 from sklearn.utils import resample
 
-from imblearn.over_sampling import SMOTE
-
 def get_data(arg_label:str,
         boxsize:int=100,
         path_to_file:str="/cosma7/data/dp004/dc-cues1/tng_dataframes/",

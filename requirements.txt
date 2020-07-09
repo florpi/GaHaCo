@@ -21,3 +21,4 @@ tensorboard
 comet-ml>=2.0.13
 xgboost>=0.9
 lightgbm>=2.3.0
+imbalanced-learn>=0.7.0

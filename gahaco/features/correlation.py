@@ -21,6 +21,7 @@ def select_uncorrelated_features(features_df, labels,
     '''
     corr = np.round(spearmanr(features_df).correlation, 4)
     corr_condensed = hierarchy.distance.squareform(1-abs(corr))
+    print("hello :-)")
     corr_linkage = hierarchy.linkage(corr_condensed, method=method)
     cluster_ids = hierarchy.fcluster(corr_linkage, distance_cutoff, criterion='distance')
     cluster_id_to_feature_ids = defaultdict(list)

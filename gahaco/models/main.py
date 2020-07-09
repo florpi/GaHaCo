@@ -65,7 +65,11 @@ def main(argv):
     m200c = features.M200_DMO.values
 
     #keep_list = [
-    #    "concentration_prada", "CentralVmax",  "Spin", #"env_5", 
+    #    "CentralVmax",
+    #    "Spin",
+    #    "beta200c",
+    #    #"env_5",
+    #    "concentration_prada",
     #]
     #features = features[keep_list]
     
@@ -212,7 +216,7 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
         x_test_save['prediction'] = y_pred
         x_test_save['label'] = y_test 
         x_test_save['hod'] = y_pred_hod
-        x_test_save.to_hdf(f'../../models/{FLAGS.model}/test_results_fold{fold}_env',
+        x_test_save.to_hdf(f'../../models/{FLAGS.model}/test_results_fold{fold}_all',
                 key='hf')
 
         metric_value = metric(y_test, y_pred, **config["metric"]["params"])
@@ -335,10 +339,10 @@ def train(model, experiment, features, labels, m200c, metric, sampler, skf, conf
                 )
         experiment.add_tag(f'classifier = {FLAGS.model}')
 
-    np.save('/cosma6/data/dp004/dc-cues1/gahaco_data/dropcol.npy', dropcol_importance)
-    np.save('/cosma6/data/dp004/dc-cues1/gahaco_data/chisquare.npy', chisquare_tpcf)
+    np.save('/cosma/data/dp004/dc-beck3/dropcol.npy', dropcol_importance)
+    np.save('/cosma/data/dp004/dc-beck3/chisquare.npy', chisquare_tpcf)
     print(features.columns.values)
-    np.save('/cosma6/data/dp004/dc-cues1/gahaco_data/names.npy', features.columns.values)
+    np.save('/cosma/data/dp004/dc-beck3/names.npy', features.columns.values)
     print('All good :)')
 
 if __name__ == "__main__":
